@@ -154,3 +154,15 @@ git push
 **Catatan**
 - Perubahan data dari staf lain tampil dalam ≤ 20–60 detik di menu yang di-cache (atau langsung setelah Anda sendiri menyimpan sesuatu).
 - Hasil terbaik: tetap jalankan pemicu `pemanasan` (lihat bagian Backend) agar server tetap hangat di jam kerja.
+
+---
+
+## UPDATE v2.2 — Pendaftaran fleksibel
+
+Pada **Jadwal Kunjungan baru** dan **Daftarkan Konsultasi** kini ada dua pilihan di bagian Pasien:
+**Pasien terdaftar** (cari dari daftar) atau **Pasien baru** (isi nama, tanggal lahir, jenis kelamin, alamat, WhatsApp; alergi opsional).
+Pasien baru otomatis masuk Data Pasien dengan No. RM, lalu langsung dijadwalkan / dibuatkan tautan konsultasi.
+Sistem memperingatkan bila ada kemungkinan pasien ganda (nama + tanggal lahir sama).
+
+Update ini **hanya frontend** — Kode.gs tidak berubah, tidak perlu deploy ulang backend.
+Ganti isi repo dengan folder baru, tetapi **pertahankan `js/config.js` Anda** (berisi alamat /exec asli).
