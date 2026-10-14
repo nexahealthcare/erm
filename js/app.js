@@ -480,7 +480,7 @@ function berandaAdmin(v) {
   <div class="nx-grid-main wide">
     <div class="stack">
       <div class="nx-card"><div class="nx-card-h"><div class="nx-sec-title"><i class="bi bi-broadcast"></i> Monitoring Kunjungan Hari Ini</div><button class="nx-btn ghost sm" data-act="nav" data-r="jadwal">Semua jadwal</button></div>
-        ${hari.length ? html`<div class="nx-list">${hari.map(j => { const p = pasienById(j.pasien_id) || {}; return html`<div class="nx-row"><div class="nx-time">${j.jam}</div><div class="grow"><div class="fw6 truncate">${p.nama}</div><div class="t-sm muted truncate">${namaPetugas(j)}</div></div>${badgeJ(j.status)}</div>`; })}</div>` : kosong('bi-calendar2-x', 'Belum ada jadwal hari ini', 'Buat jadwal kunjungan untuk pasien terdaftar.', html`<button class="nx-btn primary" data-act="jd.tambah">Buat jadwal</button>`)}</div>
+        ${hari.length ? html`<div class="nx-list">${hari.map(j => { const p = pasienById(j.pasien_id) || {}; return html`<div class="nx-row"><div class="nx-time">${j.jam}</div><div class="grow"><div class="fw6 truncate">${p.nama}</div><div class="t-sm muted truncate">${namaPetugas(j)}</div></div>${badgeJ(j.status)}</div>`; })}</div>` : kosong('bi-calendar2-x', 'Belum ada jadwal hari ini', 'Buat jadwal untuk pasien terdaftar atau pasien baru.', html`<button class="nx-btn primary" data-act="jd.tambah">Buat jadwal</button>`)}</div>
       <div class="nx-card"><div class="nx-card-h"><div class="nx-sec-title"><i class="bi bi-graph-up"></i> Kunjungan 14 Hari Terakhir</div></div><div class="nx-chart sm" id="chWrap"><canvas id="ch14"></canvas></div></div>
     </div>
     <div class="stack">
@@ -511,7 +511,7 @@ VIEWS.profil = function (v) {
   const u = S.user, tema = document.documentElement.getAttribute('data-theme');
   put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Profil Saya</h1></div></div>
   <div class="nx-grid2"><div class="nx-card accent"><div class="nx-pt mb16"><div class="nx-ava lg">${inisial(u.nama)}</div><div><div class="t-h3">${u.nama}</div><div class="nx-badge info nodot mt8">${PERAN_LABEL[u.peran]}</div></div></div>
-    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.1</dd></dl>
+    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.2</dd></dl>
     <div class="wrap-gap mt24"><button class="nx-btn secondary" data-act="pw.form"><i class="bi bi-key"></i> Ganti Password</button><button class="nx-btn danger" data-act="app.keluar"><i class="bi bi-box-arrow-right"></i> Keluar</button></div></div>
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-pen"></i> Tanda Tangan Saya</div>
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
@@ -625,7 +625,7 @@ function formJadwal(j, pasienId) {
   const p = pasienById(j.pasien_id);
   J.form = { ids: (j.petugas_ids || []).slice(), id: j.jadwal_id || '', force: false };
   MD.open('mdl', { title: e ? 'Ubah Jadwal' : 'Jadwal Kunjungan Baru', size: 'lg', body: html`
-    <div class="nx-field"><label class="nx-lab" for="jdP"><span>Pasien <span class="req">*</span></span></label><input id="jdP" class="nx-in" list="dlPas" placeholder="Ketik nama atau No. RM\u2026" value="${p ? p.nama + ' \u2014 ' + p.no_rm : ''}" ${e ? 'readonly' : ''} data-in="jd.cek"><datalist id="dlPas">${S.pasien.filter(x => x.status_aktif).map(x => html`<option value="${x.nama + ' \u2014 ' + x.no_rm}"></option>`)}</datalist></div>
+    ${blokPasien('jdP', 'dlPas', p, e)}
     <div class="nx-grid2" style="gap:0 16px">${medan('jdT', 'Tanggal', { type: 'date', v: j.tanggal, req: 1 })}${medan('jdJ', 'Jam mulai', { type: 'time', v: j.jam, req: 1 })}</div>
     <div class="nx-field"><label class="nx-lab" for="jdD">Durasi</label><select id="jdD" class="nx-sel" data-ch="jd.cek">${[30, 45, 60, 90, 120, 180].map(d => html`<option value="${d}" ${+j.durasi_menit === d ? 'selected' : ''}>${d} menit</option>`)}</select></div>
     <div class="nx-field"><label class="nx-lab"><span>Petugas yang berangkat <span class="req">*</span></span></label><div class="wrap-gap" id="jdPet">${S.staff.map(s => html`<button type="button" class="nx-chip ${J.form.ids.indexOf(s.user_id) >= 0 ? 'on' : ''}" data-act="jd.pet" data-id="${s.user_id}">${s.nama} <small style="opacity:.75">${s.peran === 'FISIO' ? 'Fisio' : s.peran === 'DOKTER' ? 'Dokter' : 'Perawat'}</small></button>`)}</div></div>
@@ -642,6 +642,58 @@ function formJadwal(j, pasienId) {
   $('#jdP').addEventListener('change', () => { const x = pasienDariInput(); if (x && !val('jdA')) $('#jdA').value = x.alamat; });
 }
 function pasienDariInput() { const s = val('jdP'); return S.pasien.find(x => (x.nama + ' \u2014 ' + x.no_rm) === s) || S.pasien.find(x => x.no_rm.toLowerCase() === s.toLowerCase()); }
+// ===== Pilih pasien terdaftar ATAU daftarkan pasien baru (dipakai form Jadwal & Konsultasi) =====
+const RG = { mode: 'lama', jk: '' };
+function blokPasien(idIn, dl, p, readonly) {
+  RG.mode = 'lama'; RG.jk = '';
+  const lama = html`<div class="nx-field" id="rgLama"><input id="${idIn}" class="nx-in" list="${dl}" placeholder="Ketik nama atau No. RM\u2026" autocomplete="off" value="${p ? p.nama + ' \u2014 ' + p.no_rm : ''}" ${readonly ? 'readonly' : ''}><datalist id="${dl}">${S.pasien.filter(x => x.status_aktif).map(x => html`<option value="${x.nama + ' \u2014 ' + x.no_rm}"></option>`)}</datalist></div>`;
+  if (readonly) return html`<div class="nx-field"><label class="nx-lab"><span>Pasien <span class="req">*</span></span></label>${lama}</div>`;
+  return html`<div class="nx-field"><label class="nx-lab"><span>Pasien <span class="req">*</span></span></label>
+    <div class="nx-seg" id="rgSeg"><button type="button" class="on" data-act="rg.mode" data-v="lama"><i class="bi bi-person-check"></i> Pasien terdaftar</button><button type="button" data-act="rg.mode" data-v="baru"><i class="bi bi-person-plus"></i> Pasien baru</button></div></div>
+    ${lama}
+    <div id="rgBaru" hidden style="border:1px dashed var(--line,#cfd8dc);border-radius:12px;padding:14px 14px 2px;margin-bottom:16px">
+      <div class="t-sm muted mb12"><i class="bi bi-info-circle"></i> Pasien baru langsung terdaftar di Data Pasien (mendapat No. RM) lalu dijadwalkan. Data lengkap dapat dilengkapi nanti lewat menu Pasien.</div>
+      ${medan('rgNama', 'Nama lengkap', { req: 1, ac: 'off', max: 120 })}
+      <div class="nx-grid2" style="gap:0 16px">${medan('rgTgl', 'Tanggal lahir', { type: 'date', req: 1 })}
+        <div class="nx-field"><label class="nx-lab"><span>Jenis kelamin <span class="req">*</span></span></label><div class="nx-seg" id="rgJk"><button type="button" data-act="rg.jk" data-v="L">Laki-laki</button><button type="button" data-act="rg.jk" data-v="P">Perempuan</button></div></div></div>
+      ${medan('rgAl', 'Alamat lengkap', { ta: 1, h: 64, req: 1, help: 'Dipakai sebagai tujuan kunjungan & tautan peta.' })}
+      <div class="nx-grid2" style="gap:0 16px">${medan('rgWa', 'No. WhatsApp', { type: 'tel', inputmode: 'tel', req: 1, ph: '0812xxxxxxx' })}${medan('rgAlg', 'Alergi', { opt: 1, ph: 'Kosongkan bila tidak ada' })}</div>
+    </div>`;
+}
+ACT['rg.mode'] = t => {
+  RG.mode = t.dataset.v; $$('#rgSeg button').forEach(b => b.classList.toggle('on', b === t));
+  const lama = $('#rgLama'), baru = $('#rgBaru'); if (lama) lama.hidden = RG.mode !== 'lama'; if (baru) baru.hidden = RG.mode !== 'baru';
+  const f = $(RG.mode === 'baru' ? '#rgNama' : '#rgLama input'); if (f) f.focus();
+};
+ACT['rg.jk'] = t => { RG.jk = t.dataset.v; $$('#rgJk button').forEach(b => b.classList.toggle('on', b === t)); };
+// Mengembalikan objek pasien (lama dipilih, atau baru yang baru saja disimpan); null bila batal/tidak valid.
+async function ambilPasien(btn, idIn) {
+  if (RG.mode === 'lama') {
+    const sv = val(idIn), ps = S.pasien.find(x => (x.nama + ' \u2014 ' + x.no_rm) === sv) || S.pasien.find(x => x.no_rm.toLowerCase() === sv.toLowerCase());
+    if (!ps) { bad(idIn, 'Pilih pasien terdaftar dari daftar, atau pilih "Pasien baru".'); return null; }
+    return ps;
+  }
+  const d = { pasien_id: '', nama: val('rgNama'), tgl_lahir: val('rgTgl'), jenis_kelamin: RG.jk, alamat: val('rgAl'), no_wa: val('rgWa'), alergi: val('rgAlg') };
+  let ok = true;
+  if (d.nama.length < 3) ok = bad('rgNama', 'Nama minimal 3 karakter.');
+  if (!d.tgl_lahir || d.tgl_lahir > today()) ok = bad('rgTgl', 'Tanggal lahir tidak valid.');
+  if (!d.jenis_kelamin) { toast('Pilih jenis kelamin.', 'warn'); ok = false; }
+  if (d.alamat.length < 5) ok = bad('rgAl', 'Alamat wajib diisi.');
+  if (!d.no_wa || d.no_wa.replace(/\D/g, '').length < 9) ok = bad('rgWa', 'Nomor WhatsApp wajib diisi.');
+  if (!ok) return null;
+  let r = await denganSibuk(btn, () => call('pasien.simpan', d));
+  if (!r.tersimpan) {
+    if (!await konfirmasi({ title: 'Kemungkinan pasien ganda', msg: 'Sudah ada pasien aktif bernama "' + r.duplikat.nama + '" (' + r.duplikat.no_rm + ') dengan tanggal lahir yang sama. Daftarkan sebagai pasien baru?', ok: 'Tetap daftarkan' })) return null;
+    r = await denganSibuk(btn, () => call('pasien.simpan', Object.assign({}, d, { force: true })));
+  }
+  const rec = Object.assign({ terakhir: '', berikut: '', jml_kunjungan: 0 }, r.pasien), i = S.pasien.findIndex(x => x.pasien_id === rec.pasien_id);
+  if (i >= 0) S.pasien[i] = Object.assign(S.pasien[i], rec); else S.pasien.push(rec);
+  // beralih ke mode "terdaftar" agar percobaan ulang tidak membuat pasien ganda
+  RG.mode = 'lama'; const inp = $('#' + idIn); if (inp) inp.value = rec.nama + ' \u2014 ' + rec.no_rm;
+  const lama = $('#rgLama'), baru = $('#rgBaru'); if (lama) lama.hidden = false; if (baru) baru.hidden = true; $$('#rgSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === 'lama'));
+  toast('Pasien baru terdaftar (' + rec.no_rm + ').');
+  return rec;
+}
 const menitDari = jam => { const p = String(jam).split(':'); return (+p[0]) * 60 + (+p[1]); };
 INP['jd.cek'] = () => cekBentrok();
 function cekBentrok() {
@@ -661,11 +713,12 @@ ACT['jd.tambah'] = () => formJadwal(null);
 ACT['jd.edit'] = t => formJadwal(S.jadwal.find(j => j.jadwal_id === t.dataset.id));
 ACT['jd.simpan'] = async btn => {
   bersihGalat($('#mdl'));
-  const ps = pasienDariInput(), tg = val('jdT'), jam = val('jdJ');
-  if (!ps) return bad('jdP', 'Pilih pasien terdaftar dari daftar.');
+  const tg = val('jdT'), jam = val('jdJ');
   if (!tg) return bad('jdT', 'Tanggal wajib diisi.');
   if (!/^\d\d:\d\d$/.test(jam)) return bad('jdJ', 'Jam wajib diisi.');
   if (!J.form.ids.length) return toast('Pilih minimal satu petugas.', 'warn');
+  let ps; try { ps = J.form.id ? pasienDariInput() : await ambilPasien(btn, 'jdP'); } catch (e) { return galat(e); }
+  if (!ps) return;
   const payload = { jadwal_id: J.form.id, pasien_id: ps.pasien_id, tanggal: tg, jam: jam, durasi_menit: +val('jdD'), petugas_ids: J.form.ids, layanan: val('jdL'), alamat_kunjungan: val('jdA'), catatan_admin: val('jdC'), paket_id: $('#jdPk') ? val('jdPk') : '' };
   const kirim = async force => {
     const r = await optimis(() => {
@@ -1642,7 +1695,7 @@ ACT['ko.baru'] = () => {
   const dokter = S.staff.filter(s => s.peran === 'DOKTER');
   if (!dokter.length) return toast('Belum ada akun dokter aktif.', 'warn');
   MD.open('mdl', { title: 'Daftarkan Konsultasi', body: html`
-    <div class="nx-field"><label class="nx-lab" for="koP"><span>Pasien <span class="req">*</span></span></label><input id="koP" class="nx-in" list="dlKo" placeholder="Ketik nama atau No. RM\u2026" autocomplete="off"><datalist id="dlKo">${S.pasien.filter(x => x.status_aktif).map(x => html`<option value="${x.nama + ' \u2014 ' + x.no_rm}"></option>`)}</datalist></div>
+    ${blokPasien('koP', 'dlKo', null, false)}
     <div class="nx-field"><label class="nx-lab" for="koD"><span>Dokter <span class="req">*</span></span></label><select id="koD" class="nx-sel">${dokter.map(d => html`<option value="${d.user_id}">${d.nama}</option>`)}</select></div>
     <div class="nx-field"><label class="nx-lab" for="koT"><span>Biaya konsultasi <span class="req">*</span></span></label><select id="koT" class="nx-sel"><option value="" disabled selected>Pilih biaya\u2026</option><option value="gratis">Gratis (tanpa tagihan)</option>${[['Tarif konsultasi', S.tarif.filter(x => String(x.kategori).toLowerCase() === 'konsultasi')], ['Tarif lainnya', S.tarif.filter(x => String(x.kategori).toLowerCase() !== 'konsultasi')]].filter(g => g[1].length).map(g => html`<optgroup label="${g[0]}">${g[1].map(x => html`<option value="${x.tarif_id}">${x.nama_layanan} \u2014 ${rp(x.harga)}</option>`)}</optgroup>`)}</select><div class="nx-help">Bila bertarif, invoice langsung terbit saat didaftarkan dan muncul di menu Tagihan.</div></div>
     ${medan('koK', 'Keluhan singkat', { ta: 1, h: 72, opt: 1, max: 300, ph: 'mis. Nyeri dada ringan sejak pagi' })}
@@ -1650,9 +1703,10 @@ ACT['ko.baru'] = () => {
     footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="ko.simpan"><i class="bi bi-link-45deg"></i> Buat Tautan</button>` });
 };
 ACT['ko.simpan'] = async btn => {
-  bersihGalat($('#mdl')); const s = val('koP'), ps = S.pasien.find(x => (x.nama + ' \u2014 ' + x.no_rm) === s) || S.pasien.find(x => x.no_rm.toLowerCase() === s.toLowerCase());
-  if (!ps) return bad('koP', 'Pilih pasien terdaftar dari daftar.');
+  bersihGalat($('#mdl'));
   const tf = val('koT'); if (!tf) return bad('koT', 'Pilih biaya konsultasi (atau Gratis).');
+  let ps; try { ps = await ambilPasien(btn, 'koP'); } catch (e) { return galat(e); }
+  if (!ps) return;
   try { const r = await denganSibuk(btn, () => call('kons.buat', { pasien_id: ps.pasien_id, dokter_id: val('koD') || $('#koD').value, keluhan: val('koK'), tarif_id: tf === 'gratis' ? '' : tf })); MD.close('mdl'); KS.list = null; tampilTautan(r, true); if (S.route === '/konsul') render(true); } catch (e) { galat(e); }
 };
 ACT['ko.ulang'] = async t => {
