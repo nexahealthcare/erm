@@ -511,7 +511,7 @@ VIEWS.profil = function (v) {
   const u = S.user, tema = document.documentElement.getAttribute('data-theme');
   put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Profil Saya</h1></div></div>
   <div class="nx-grid2"><div class="nx-card accent"><div class="nx-pt mb16"><div class="nx-ava lg">${inisial(u.nama)}</div><div><div class="t-h3">${u.nama}</div><div class="nx-badge info nodot mt8">${PERAN_LABEL[u.peran]}</div></div></div>
-    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.2</dd></dl>
+    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.3</dd></dl>
     <div class="wrap-gap mt24"><button class="nx-btn secondary" data-act="pw.form"><i class="bi bi-key"></i> Ganti Password</button><button class="nx-btn danger" data-act="app.keluar"><i class="bi bi-box-arrow-right"></i> Keluar</button></div></div>
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-pen"></i> Tanda Tangan Saya</div>
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
@@ -1085,6 +1085,48 @@ ACT['v.pilih'] = t => {
   simpanLokal(); const sc = $('#pkList').scrollTop; isiPicker(); $('#pkList').scrollTop = sc;
 };
 
+// \u2500\u2500 Aturan pakai terstruktur: [kali/hari] \u00d7 [takaran] [satuan] [waktu/catatan]  (atau teks bebas) \u2500\u2500
+const AP_SATUAN = ['tab', 'kapsul', 'sdm', 'sdt', 'ml', 'tetes', 'sachet', 'mg'];
+const AP_WAKTU = ['sebelum makan', 'sesudah makan', 'saat makan', 'sebelum tidur', 'bila perlu', 'pagi hari', 'malam hari'];
+const AP_PECAH = { '0.5': '\u00bd', '1.5': '1\u00bd', '2.5': '2\u00bd', '0.25': '\u00bc', '0.75': '\u00be', '1/2': '\u00bd', '1/4': '\u00bc', '3/4': '\u00be' };
+const apTakarOK = t => /^(\d+([.,]\d+)?|\d*\s?[\u00bd\u00bc\u00be]|\d+\/\d+)$/.test(t) && !/^0+([.,]0+)?$/.test(t);
+const apRangkai = (f, t, sat, w) => { const tt = String(t).replace(',', '.'); return [f + ' \u00d7', AP_PECAH[tt] || tt, sat, w].filter(Boolean).join(' ').replace('\u00d7 ', '\u00d7 '); };
+function apParse(txt) {
+  txt = String(txt || '').trim(); if (!txt) return { m: 's', f: '', t: '', s: 'tab', w: '' };
+  const m = txt.match(/^(\d+)\s*[x\u00d7X]\s*(\d+(?:[.,]\d+)?|\d*\s?[\u00bd\u00bc\u00be]|\d+\/\d+)\s*(tablet|tab|kapsul|sdm|sdt|ml|tetes|sachet|mg)?(?:\s+(.*))?$/i);
+  if (!m) return { m: 'b', b: txt };
+  const u = (m[3] || '').toLowerCase(); return { m: 's', f: m[1], t: m[2].trim(), s: u === 'tablet' ? 'tab' : u, w: (m[4] || '').trim() };
+}
+function apHtml(r, i, apk) {
+  const a = (r && r._ap) || apParse(r && r.aturan_pakai), id = 'dlw' + apk + i, b = a.m === 'b';
+  return html`<div class="ap" data-apk="${apk}" data-i="${i}" data-m="${a.m}"><div class="nx-lab" style="margin-bottom:4px"><span>Aturan pakai <span class="req">*</span></span></div>
+    <div class="ap-s" style="display:${b ? 'none' : 'flex'};flex-wrap:wrap;gap:8px;align-items:center">
+      <input class="nx-in" style="width:64px;text-align:center" inputmode="numeric" maxlength="2" placeholder="3" value="${a.f || ''}" data-ap="f" aria-label="Berapa kali sehari"><span class="muted" title="kali sehari">\u00d7</span>
+      <input class="nx-in" style="width:72px;text-align:center" inputmode="decimal" maxlength="5" placeholder="1" value="${a.t || ''}" data-ap="t" aria-label="Takaran sekali minum">
+      <select class="nx-sel" style="width:96px" data-ap="s" aria-label="Satuan"><option value="" ${a.s ? '' : 'selected'}>\u2014</option>${AP_SATUAN.map(x => html`<option value="${x}" ${a.s === x ? 'selected' : ''}>${x}</option>`)}</select>
+      <input class="nx-in" style="flex:1;min-width:150px" list="${id}" maxlength="80" placeholder="sesudah makan" value="${a.w || ''}" data-ap="w" aria-label="Waktu atau catatan" autocomplete="off"><datalist id="${id}">${AP_WAKTU.map(x => html`<option value="${x}"></option>`)}</datalist></div>
+    <input class="nx-in" style="display:${b ? 'block' : 'none'}" maxlength="150" placeholder="Tulis aturan pakai bebas, mis. oleskan tipis pada luka 2 kali sehari" value="${a.b || ''}" data-ap="b" aria-label="Aturan pakai (teks bebas)">
+    <div class="t-sm mt8" style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="ap-pv muted"></span><button type="button" class="nx-btn ghost sm" data-act="ap.mode">${b ? 'Pakai isian cepat' : 'Tulis bebas'}</button></div></div>`;
+}
+function apNilai(ap) {
+  const g = k => { const e = ap.querySelector('[data-ap="' + k + '"]'); return e ? e.value.trim() : ''; };
+  if (ap.dataset.m === 'b') return g('b');
+  const f = g('f'), t = g('t'); if (!/^\d+$/.test(f) || +f < 1 || !apTakarOK(t)) return '';
+  return apRangkai(f, t, g('s'), g('w'));
+}
+function apUpdate(ap) {
+  const v = apNilai(ap), pv = ap.querySelector('.ap-pv'), g = k => { const e = ap.querySelector('[data-ap="' + k + '"]'); return e ? e.value.trim() : ''; };
+  if (pv) { pv.textContent = v ? 'Tertulis: ' + v : (ap.dataset.m === 'b' ? '' : 'Isi berapa kali sehari dan takaran.'); pv.style.color = v ? 'var(--ok-ink, #1b6e3c)' : ''; }
+  if (ap.dataset.apk === 'v' && V && V.f && V.f.resep[+ap.dataset.i]) { const r = V.f.resep[+ap.dataset.i]; r.aturan_pakai = v; r._ap = { m: ap.dataset.m, f: g('f'), t: g('t'), s: g('s'), w: g('w'), b: g('b') }; simpanLokalD(); }
+}
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => { const ap = e.target.closest && e.target.closest('.ap'); if (ap) apUpdate(ap); }));
+ACT['ap.mode'] = t => {
+  const ap = t.closest('.ap'), keB = ap.dataset.m !== 'b', cur = apNilai(ap), q = k => ap.querySelector('[data-ap="' + k + '"]');
+  if (keB) { q('b').value = cur || q('b').value; } else { const a = apParse(q('b').value); if (a.m === 's') { q('f').value = a.f; q('t').value = a.t; q('s').value = a.s; q('w').value = a.w; } }
+  ap.dataset.m = keB ? 'b' : 's'; ap.querySelector('.ap-s').style.display = keB ? 'none' : 'flex'; q('b').style.display = keB ? 'block' : 'none'; t.textContent = keB ? 'Pakai isian cepat' : 'Tulis bebas';
+  apUpdate(ap); const fo = keB ? q('b') : q('f'); if (fo) fo.focus();
+};
+
 // \u2500\u2500 Langkah 4: Resep \u2500\u2500
 function stepResep(b) {
   const f = V.f;
@@ -1092,8 +1134,9 @@ function stepResep(b) {
   ${f.resep.length ? raw(f.resep.map((r, i) => html`<div class="nx-item" style="display:block"><div class="row-between mb8"><b>Obat ${i + 1}</b><button class="nx-btn ghost sm" style="color:var(--err-ink)" data-act="v.resepHapus" data-i="${i}" aria-label="Hapus obat"><i class="bi bi-trash"></i></button></div>
     <div class="nx-field"><input class="nx-in" placeholder="Nama obat" data-in="v.resep" data-i="${i}" data-k="nama_obat" value="${r.nama_obat}" maxlength="150" aria-label="Nama obat"></div>
     <div class="nx-grid2" style="gap:0 10px"><div class="nx-field"><input class="nx-in" placeholder="Dosis (500 mg)" data-in="v.resep" data-i="${i}" data-k="dosis" value="${r.dosis}" maxlength="80" aria-label="Dosis"></div><div class="nx-field"><input class="nx-in" placeholder="Jumlah (10 tablet)" data-in="v.resep" data-i="${i}" data-k="jumlah" value="${r.jumlah}" maxlength="50" aria-label="Jumlah"></div></div>
-    <div class="nx-field"><input class="nx-in" placeholder="Aturan pakai (3 \u00d7 sehari sesudah makan)" data-in="v.resep" data-i="${i}" data-k="aturan_pakai" value="${r.aturan_pakai}" maxlength="150" aria-label="Aturan pakai"></div>
+    <div class="nx-field">${apHtml(r, i, 'v')}</div>
     <input class="nx-in" placeholder="Instruksi tambahan (opsional)" data-in="v.resep" data-i="${i}" data-k="instruksi" value="${r.instruksi}" maxlength="300" aria-label="Instruksi"></div>`.s).join('')) : kosong('bi-capsule', 'Tidak ada resep', 'Tambahkan bila pasien diberi obat. Boleh dikosongkan.')}</div>`);
+  $$('#wizBody .ap').forEach(a => { const pv = a.querySelector('.ap-pv'), v = apNilai(a); if (pv && v) { pv.textContent = 'Tertulis: ' + v; } });
 }
 INP['v.resep'] = el => { V.f.resep[+el.dataset.i][el.dataset.k] = el.value; simpanLokalD(); };
 ACT['v.resepTambah'] = () => { V.f.resep.push({ nama_obat: '', dosis: '', aturan_pakai: '', jumlah: '', instruksi: '' }); stepResep($('#wizBody')); };
@@ -1768,7 +1811,7 @@ function barisResep(i) {
   return html`<div class="rx-row" data-rx="${i}"><div class="row-between mb8"><b class="t-sm">Obat #<span class="rxn">${i + 1}</span></b><button type="button" class="nx-btn ghost sm" data-act="ko.rx.hapus" aria-label="Hapus obat"><i class="bi bi-trash"></i></button></div>
     <div class="nx-field"><input class="nx-in" data-f="nama_obat" maxlength="150" placeholder="Nama obat & kekuatan, mis. Paracetamol 500 mg" aria-label="Nama obat"></div>
     <div class="nx-grid2" style="gap:8px"><input class="nx-in" data-f="dosis" maxlength="80" placeholder="Dosis" aria-label="Dosis"><input class="nx-in" data-f="jumlah" maxlength="50" placeholder="Jumlah, mis. 10 tablet" aria-label="Jumlah"></div>
-    <input class="nx-in mt8" data-f="aturan_pakai" maxlength="150" placeholder="Aturan pakai, mis. 3x1 sesudah makan *" aria-label="Aturan pakai">
+    <div class="mt8">${apHtml(null, 'k' + i, 'ko')}</div>
     <input class="nx-in mt8" data-f="instruksi" maxlength="200" placeholder="Instruksi tambahan (opsional)" aria-label="Instruksi"></div>`;
 }
 ACT['ko.resep'] = t => {
@@ -1782,9 +1825,9 @@ ACT['ko.rx.tambah'] = () => { const l = $('#rxList'); if (!l || l.children.lengt
 ACT['ko.rx.hapus'] = t => { const l = $('#rxList'); if (!l || l.children.length <= 1) return; t.closest('.rx-row').remove(); nomorResep(); };
 function nomorResep() { $$('#rxList .rx-row').forEach((r, i) => { $('.rxn', r).textContent = i + 1; }); }
 ACT['ko.rx.kirim'] = async t => {
-  const items = $$('#rxList .rx-row').map(r => { const o = {}; $$('[data-f]', r).forEach(x => { o[x.dataset.f] = x.value.trim(); }); return o; }).filter(o => o.nama_obat);
+  const items = $$('#rxList .rx-row').map(r => { const o = {}; $$('[data-f]', r).forEach(x => { o[x.dataset.f] = x.value.trim(); }); const ap = $('.ap', r); o.aturan_pakai = ap ? apNilai(ap) : ''; return o; }).filter(o => o.nama_obat);
   if (!items.length) return toast('Isi minimal satu obat.', 'err');
-  const kosongAturan = items.findIndex(o => !o.aturan_pakai); if (kosongAturan >= 0) return toast('Aturan pakai obat #' + (kosongAturan + 1) + ' wajib diisi.', 'err');
+  const kosongAturan = items.findIndex(o => !o.aturan_pakai); if (kosongAturan >= 0) return toast('Aturan pakai obat #' + (kosongAturan + 1) + ' belum lengkap: isi berapa kali sehari dan takaran (atau pilih Tulis bebas).', 'err');
   t.disabled = true; t.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Membuat PDF\u2026';
   try {
     const r = await call('kons.resep', { kons_id: KS.rxId, items: items, catatan: ($('#rxCat') || {}).value || '' });
