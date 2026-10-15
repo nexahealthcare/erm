@@ -376,7 +376,7 @@ function gambarShell() {
 }
 ACT['app.tema'] = ubahTema;
 ACT['app.menu'] = () => {
-  const ex = ['tagihan', 'laporan', 'master', 'audit', 'profil'];
+  const ex = ['tagihan', 'laporan', 'keluar', 'master', 'audit', 'profil'];
   MD.open('mdl', { title: 'Menu lainnya', size: 'sm', body: html`<div class="nx-nav" style="padding:0">${ex.map(k => html`<a data-act="nav" data-r="${k}" data-close="1"><i class="bi ${NAV[k].ic}"></i>${NAV[k].t}</a>`)}<a data-act="app.tema"><i class="bi bi-moon-stars"></i>Ganti tema</a><a data-act="app.keluar" data-close="1" style="color:var(--err-ink)"><i class="bi bi-box-arrow-right"></i>Keluar</a></div>` });
 };
 
