@@ -285,7 +285,7 @@ const NAV = {
   audit: { ic: 'bi-shield-check', t: 'Audit Log' }, konsul: { ic: 'bi-chat-dots-fill', t: 'Konsultasi' }, profil: { ic: 'bi-person-circle', t: 'Profil' }
 };
 function menuPeran() {
-  if (isSuper()) return ['home', 'jadwal', 'pasien', 'tagihan', 'konsul', 'laporan', 'master', 'audit'];
+  if (isSuper()) return ['home', 'jadwal', 'pasien', 'tagihan', 'konsul', 'laporan', 'keluar', 'master', 'audit'];
   if (isKelola()) return ['home', 'jadwal', 'pasien', 'tagihan', 'konsul'];
   if (S.user.peran === 'DOKTER') return ['home', 'jadwal', 'pasien', 'konsul', 'profil'];
   return ['home', 'jadwal', 'pasien', 'profil'];
@@ -511,7 +511,7 @@ VIEWS.profil = function (v) {
   const u = S.user, tema = document.documentElement.getAttribute('data-theme');
   put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Profil Saya</h1></div></div>
   <div class="nx-grid2"><div class="nx-card accent"><div class="nx-pt mb16"><div class="nx-ava lg">${inisial(u.nama)}</div><div><div class="t-h3">${u.nama}</div><div class="nx-badge info nodot mt8">${PERAN_LABEL[u.peran]}</div></div></div>
-    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.4</dd></dl>
+    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.5</dd></dl>
     <div class="wrap-gap mt24"><button class="nx-btn secondary" data-act="pw.form"><i class="bi bi-key"></i> Ganti Password</button><button class="nx-btn danger" data-act="app.keluar"><i class="bi bi-box-arrow-right"></i> Keluar</button></div></div>
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-pen"></i> Tanda Tangan Saya</div>
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
@@ -1340,7 +1340,7 @@ VIEWS.master = async function (v) {
 };
 function segarkanLokal() {
   S.staff = M.d.users.filter(u => u.status_aktif && ['DOKTER', 'PERAWAT', 'FISIO'].indexOf(u.peran) >= 0).map(u => ({ user_id: u.user_id, nama: u.nama, peran: u.peran, jabatan: u.jabatan, no_str: u.no_str, no_sip: u.no_sip, no_hp: u.no_hp }));
-  S.tarif = M.d.tarif.filter(x => x.aktif); S.bhp = M.d.bhp.filter(x => x.aktif); S.paket = (M.d.paket || []).filter(x => x.aktif);
+  S.tarif = M.d.tarif.filter(x => x.aktif); S.bhp = M.d.bhp.filter(x => x.aktif).map(x => Object.assign({}, x, { harga: x.harga_jual })); S.paket = (M.d.paket || []).filter(x => x.aktif);
 }
 function gambarMaster() {
   const b = $('#mBody'); if (!b) return;
@@ -1390,9 +1390,9 @@ ACT['u.toggle'] = async t => {
 function tabMasterItem(el, jenis) {
   const isT = jenis === 'tarif', rows = (isT ? M.d.tarif : M.d.bhp).filter(x => !M.q || ((isT ? x.nama_layanan : x.nama) + x.kode + (x.kategori || '')).toLowerCase().indexOf(M.q) >= 0);
   put(el, html`<div class="nx-toolbar"><div class="nx-in-icon"><i class="bi bi-search"></i><input class="nx-in" placeholder="Cari\u2026" value="${M.q}" data-in="m.q" aria-label="Cari"></div><button class="nx-btn primary" data-act="mi.form" data-j="${jenis}"><i class="bi bi-plus-lg"></i> ${isT ? 'Tarif Baru' : 'BHP Baru'}</button></div>
-  <div class="nx-card pad0"><div class="nx-tbl-wrap"><table class="nx-tbl"><thead><tr><th>Kode</th><th>${isT ? 'Layanan' : 'Nama BHP'}</th><th>${isT ? 'Kategori' : 'Satuan'}</th><th class="r">${isT ? 'Harga' : 'Harga tagih'}</th>${isT ? '' : html`<th class="r">Stok</th>`}<th>Status</th><th></th></tr></thead><tbody>
-    ${rows.map(x => html`<tr style="${x.aktif ? '' : 'opacity:.55'}"><td class="muted">${x.kode}</td><td class="fw6">${isT ? x.nama_layanan : x.nama}</td><td>${isT ? x.kategori : x.satuan}</td><td class="r num">${rp(x.harga)}</td>${isT ? '' : html`<td class="r num"><b style="color:${x.stok <= (x.stok_min || 0) ? 'var(--err-ink)' : 'inherit'}">${x.stok}</b>${x.stok <= (x.stok_min || 0) ? html` <span class="nx-badge err nodot">${x.stok <= 0 ? 'Habis' : 'Menipis'}</span>` : ''}</td>`}<td>${x.aktif ? html`<span class="nx-badge ok">Aktif</span>` : html`<span class="nx-badge">Nonaktif</span>`}</td><td class="r">${isT ? '' : html`<button class="nx-btn secondary sm" data-act="bhp.stokForm" data-id="${x.bhp_id}"><i class="bi bi-box-arrow-in-down"></i> Stok</button>`}<button class="nx-btn ghost sm" data-act="mi.form" data-j="${jenis}" data-id="${x[isT ? 'tarif_id' : 'bhp_id']}"><i class="bi bi-pencil"></i></button><button class="nx-btn ghost sm" style="color:var(--err-ink)" data-act="m.hapus" data-j="${jenis}" data-id="${x[isT ? 'tarif_id' : 'bhp_id']}" title="Hapus" aria-label="Hapus"><i class="bi bi-trash"></i></button></td></tr>`)}</tbody></table></div>${rows.length ? '' : kosong('bi-inbox', 'Belum ada data', '')}</div>
-  <div class="nx-note mt12"><i class="bi bi-info-circle"></i> ${isT ? 'Perubahan harga tidak mengubah invoice lama \u2014 harga disimpan saat tindakan dicatat.' : 'Harga BHP ditagihkan ke pasien bila dipakai di luar paket (isi Rp 0 bila tidak ingin ditagihkan). Dalam paket, BHP sudah termasuk harga paket. Harga disimpan saat dicatat, jadi perubahan tidak mengubah invoice lama.'}</div>`);
+  <div class="nx-card pad0"><div class="nx-tbl-wrap"><table class="nx-tbl"><thead><tr><th>Kode</th><th>${isT ? 'Layanan' : 'Nama BHP'}</th><th>${isT ? 'Kategori' : 'Satuan'}</th>${isT ? html`<th class="r">Harga</th>` : html`<th class="r">Harga beli</th><th class="r">Harga jual</th><th class="r">Stok</th>`}<th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(x => html`<tr style="${x.aktif ? '' : 'opacity:.55'}"><td class="muted">${x.kode}</td><td class="fw6">${isT ? x.nama_layanan : x.nama}</td><td>${isT ? x.kategori : x.satuan}</td>${isT ? html`<td class="r num">${rp(x.harga)}</td>` : html`<td class="r num">${x.harga_beli ? rp(x.harga_beli) : html`<span class="muted">\u2014</span>`}</td><td class="r num">${rp(x.harga_jual)}${x.otomatis ? html`<div class="t-sm muted">+${x.persen_efektif}%${x.persen_jual === '' ? ' (default)' : ''}</div>` : html`<div class="t-sm muted">manual</div>`}</td>`}${isT ? '' : html`<td class="r num"><b style="color:${x.stok <= (x.stok_min || 0) ? 'var(--err-ink)' : 'inherit'}">${x.stok}</b>${x.stok <= (x.stok_min || 0) ? html` <span class="nx-badge err nodot">${x.stok <= 0 ? 'Habis' : 'Menipis'}</span>` : ''}</td>`}<td>${x.aktif ? html`<span class="nx-badge ok">Aktif</span>` : html`<span class="nx-badge">Nonaktif</span>`}</td><td class="r">${isT ? '' : html`<button class="nx-btn secondary sm" data-act="bhp.beliForm" data-id="${x.bhp_id}"><i class="bi bi-cart-plus"></i> Beli</button> <button class="nx-btn secondary sm" data-act="bhp.stokForm" data-id="${x.bhp_id}"><i class="bi bi-box-arrow-in-down"></i> Stok</button>`}<button class="nx-btn ghost sm" data-act="mi.form" data-j="${jenis}" data-id="${x[isT ? 'tarif_id' : 'bhp_id']}"><i class="bi bi-pencil"></i></button><button class="nx-btn ghost sm" style="color:var(--err-ink)" data-act="m.hapus" data-j="${jenis}" data-id="${x[isT ? 'tarif_id' : 'bhp_id']}" title="Hapus" aria-label="Hapus"><i class="bi bi-trash"></i></button></td></tr>`)}</tbody></table></div>${rows.length ? '' : kosong('bi-inbox', 'Belum ada data', '')}</div>
+  <div class="nx-note mt12"><i class="bi bi-info-circle"></i> ${isT ? 'Perubahan harga tidak mengubah invoice lama \u2014 harga disimpan saat tindakan dicatat.' : 'Harga jual = harga beli + persen (default ' + S.cfg.persen_jual_bhp + '%, dibulatkan Rp 500), ditagihkan ke pasien bila BHP dipakai di luar paket. Tanpa harga beli, harga jual manual dipakai (Rp 0 = tidak ditagihkan). Dalam paket, BHP sudah termasuk harga paket. Harga disimpan saat dicatat, jadi perubahan tidak mengubah invoice lama.'}</div>`);
 }
 const tabTarif = el => tabMasterItem(el, 'tarif'), tabBhp = el => tabMasterItem(el, 'bhp');
 INP['m.q'] = debounce(el => { M.q = el.value.toLowerCase(); tabMasterItem($('#mTab'), M.tab); const q = $('#mTab input'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 200);
@@ -1400,13 +1400,22 @@ ACT['mi.form'] = t => {
   const isT = t.dataset.j === 'tarif', x = t.dataset.id ? (isT ? M.d.tarif : M.d.bhp).find(r => r[isT ? 'tarif_id' : 'bhp_id'] === t.dataset.id) : null;
   MD.open('mdl', { title: (x ? 'Ubah ' : 'Tambah ') + (isT ? 'Tarif Layanan' : 'BHP'), size: 'sm', body: html`${medan('miKode', 'Kode', { v: x && x.kode, opt: 1, ph: 'Otomatis bila kosong', max: 20 })}${medan('miNama', isT ? 'Nama layanan' : 'Nama BHP', { v: x && (isT ? x.nama_layanan : x.nama), req: 1, max: 120 })}
     ${isT ? medan('miKat', 'Kategori', { v: x ? x.kategori : 'Keperawatan', max: 40, ph: 'Keperawatan / Medis / Fisioterapi' }) : medan('miSat', 'Satuan', { v: x && x.satuan, req: 1, max: 20, ph: 'pcs, box, lembar' })}
-    ${medan('miHarga', isT ? 'Harga (Rp)' : 'Harga tagih ke pasien (Rp)', { v: x ? x.harga : '', inputmode: 'numeric', req: 1 })}${isT ? '' : html`<div class="nx-grid2" style="gap:0 16px">${x ? '' : medan('miStok', 'Stok awal', { v: 0, inputmode: 'numeric' })}${medan('miStokMin', 'Batas stok minimum', { v: x ? x.stok_min : 0, inputmode: 'numeric', help: 'Peringatan saat stok \u2264 batas.' })}</div>`}<label class="nx-check"><input type="checkbox" id="miAktif" ${!x || x.aktif ? 'checked' : ''}><span>Aktif (dapat dipilih petugas)</span></label>`,
-    footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="mi.simpan" data-j="${t.dataset.j}" data-id="${t.dataset.id || ''}">Simpan</button>` });
+    ${isT ? medan('miHarga', 'Harga (Rp)', { v: x ? x.harga : '', inputmode: 'numeric', req: 1 }) : html`<div class="nx-grid2" style="gap:0 16px">${medan('miBeli', 'Harga beli (Rp)', { v: x && x.harga_beli ? x.harga_beli : '', inputmode: 'numeric', opt: 1, ph: 'per satuan' })}${medan('miPersen', 'Persen jual (%)', { v: x && x.persen_jual !== '' && x.persen_jual != null ? x.persen_jual : '', inputmode: 'decimal', opt: 1, ph: 'bawaan ' + S.cfg.persen_jual_bhp + '%' })}</div>
+    <div class="nx-alert info mb12" id="miPrev"><i class="bi bi-calculator"></i><div></div></div>
+    ${medan('miHarga', 'Harga jual manual (Rp)', { v: x ? x.harga : '', inputmode: 'numeric', opt: 1, help: 'Dipakai hanya bila Harga beli kosong. Rp 0 = tidak ditagihkan.' })}`}${isT ? '' : html`<div class="nx-grid2" style="gap:0 16px">${x ? '' : medan('miStok', 'Stok awal', { v: 0, inputmode: 'numeric' })}${medan('miStokMin', 'Batas stok minimum', { v: x ? x.stok_min : 0, inputmode: 'numeric', help: 'Peringatan saat stok \u2264 batas.' })}</div>`}<label class="nx-check"><input type="checkbox" id="miAktif" ${!x || x.aktif ? 'checked' : ''}><span>Aktif (dapat dipilih petugas)</span></label>`,
+    footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="mi.simpan" data-j="${t.dataset.j}" data-id="${t.dataset.id || ''}">Simpan</button>`, onShown: isT ? undefined : bhpPrev });
 };
+function bhpPrev() {
+  const box = $('#miPrev'); if (!box) return;
+  const calc = () => { const beli = num(val('miBeli')), ps = val('miPersen') === '' ? num(S.cfg.persen_jual_bhp) : num(val('miPersen')), man = num(val('miHarga')); let t;
+    if (beli > 0) { const j = Math.max(500, Math.round(beli * (1 + ps / 100) / 500) * 500); t = 'Harga jual otomatis: <b>' + rp(j) + '</b> (harga beli ' + rp(beli) + ' + ' + ps + '%, dibulatkan Rp 500)'; } else t = man > 0 ? 'Harga jual manual: <b>' + rp(man) + '</b>' : 'Tidak ditagihkan (harga jual Rp 0). Isi harga beli agar harga jual dihitung otomatis.';
+    box.lastElementChild.innerHTML = t; };
+  ['miBeli', 'miPersen', 'miHarga'].forEach(id => { const e = $('#' + id); if (e) e.addEventListener('input', calc); }); calc();
+}
 ACT['mi.simpan'] = async btn => {
   bersihGalat($('#mdl')); const isT = btn.dataset.j === 'tarif', h = num(val('miHarga'));
-  const d = isT ? { tarif_id: btn.dataset.id, kode: val('miKode'), nama_layanan: val('miNama'), kategori: val('miKat'), harga: h, aktif: $('#miAktif').checked } : { bhp_id: btn.dataset.id, kode: val('miKode'), nama: val('miNama'), satuan: val('miSat'), harga: h, stok_min: num(val('miStokMin')), stok: $('#miStok') ? num(val('miStok')) : undefined, aktif: $('#miAktif').checked };
-  let ok = true; if (val('miNama').length < 3) ok = bad('miNama', 'Minimal 3 karakter.'); if (!isT && !d.satuan) ok = bad('miSat', 'Satuan wajib.'); if (val('miHarga') === '' || h < 0) ok = bad('miHarga', 'Harga tidak valid.'); if (!ok) return;
+  const d = isT ? { tarif_id: btn.dataset.id, kode: val('miKode'), nama_layanan: val('miNama'), kategori: val('miKat'), harga: h, aktif: $('#miAktif').checked } : { bhp_id: btn.dataset.id, kode: val('miKode'), nama: val('miNama'), satuan: val('miSat'), harga: val('miHarga') === '' ? 0 : h, harga_beli: val('miBeli') === '' ? 0 : num(val('miBeli')), persen_jual: val('miPersen'), stok_min: num(val('miStokMin')), stok: $('#miStok') ? num(val('miStok')) : undefined, aktif: $('#miAktif').checked };
+  let ok = true; if (val('miNama').length < 3) ok = bad('miNama', 'Minimal 3 karakter.'); if (!isT && !d.satuan) ok = bad('miSat', 'Satuan wajib.'); if (isT ? (val('miHarga') === '' || h < 0) : ((val('miHarga') !== '' && h < 0) || (val('miBeli') !== '' && num(val('miBeli')) < 0))) ok = bad(isT || val('miBeli') === '' ? 'miHarga' : 'miBeli', 'Harga tidak valid.'); if (!isT && val('miPersen') !== '' && !(num(val('miPersen')) >= 0 && num(val('miPersen')) <= 1000)) ok = bad('miPersen', 'Persen 0\u20131000.'); if (!ok) return;
   try { const r = await denganSibuk(btn, () => call(isT ? 'tarif.simpan' : 'bhp.simpan', d)); const arr = isT ? M.d.tarif : M.d.bhp, k = isT ? 'tarif_id' : 'bhp_id', i = arr.findIndex(x => x[k] === r[k]); if (i >= 0) arr[i] = r; else arr.push(r); segarkanLokal(); MD.close('mdl'); tabMasterItem($('#mTab'), M.tab); toast('Tersimpan.'); } catch (e) { galat(e); }
 };
 
@@ -1415,7 +1424,7 @@ function tabKlinik(el) {
   const c = M.d.config; M.logo = undefined;
   put(el, html`<div class="nx-grid2"><div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-hospital"></i> Identitas Klinik</div>${medan('cNama', 'Nama klinik', { v: c.nama_klinik, req: 1 })}${medan('cAl', 'Alamat', { v: c.alamat, ta: 1, h: 64 })}<div class="nx-grid2" style="gap:0 16px">${medan('cTel', 'Telepon', { v: c.telepon, type: 'tel' })}${medan('cEm', 'Email', { v: c.email, type: 'email' })}</div>
     <div class="nx-field"><label class="nx-lab">Logo (tampil di aplikasi & kop PDF)</label><div class="row-gap"><img id="logoPrev" src="${c.logo || LOGO_FULL}" alt="Logo" style="height:48px;border-radius:8px;background:#fff;padding:2px"><label class="nx-btn secondary sm" style="margin:0"><i class="bi bi-upload"></i> Unggah<input type="file" accept="image/png,image/jpeg" data-ch="c.logo" class="hide"></label>${c.logo ? html`<button class="nx-btn ghost sm" data-act="c.logoHapus">Pakai bawaan</button>` : ''}</div><div class="nx-help">PNG/JPG, diperkecil otomatis.</div></div></div>
-  <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-receipt"></i> Invoice & Jadwal</div><div class="nx-grid2" style="gap:0 16px">${medan('cPre', 'Prefix invoice', { v: c.prefix_invoice, max: 8 })}${medan('cJt', 'Jatuh tempo (hari)', { v: c.jatuh_tempo_hari, inputmode: 'numeric' })}</div>${medan('cBuf', 'Jeda transit antar kunjungan (menit)', { v: c.buffer_transit_menit, inputmode: 'numeric', help: 'Dipakai untuk mendeteksi bentrok jadwal petugas.' })}${medan('cRek', 'Informasi pembayaran (rekening / QRIS)', { v: c.rekening, ta: 1, h: 72, help: 'Tercetak pada invoice.' })}</div></div>
+  <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-receipt"></i> Invoice & Jadwal</div><div class="nx-grid2" style="gap:0 16px">${medan('cPre', 'Prefix invoice', { v: c.prefix_invoice, max: 8 })}${medan('cJt', 'Jatuh tempo (hari)', { v: c.jatuh_tempo_hari, inputmode: 'numeric' })}</div>${medan('cBuf', 'Jeda transit antar kunjungan (menit)', { v: c.buffer_transit_menit, inputmode: 'numeric', help: 'Dipakai untuk mendeteksi bentrok jadwal petugas.' })}${medan('cPj', 'Persen jual BHP bawaan (%)', { v: c.persen_jual_bhp, inputmode: 'decimal', help: 'Harga jual BHP = harga beli + persen ini, dibulatkan ke Rp 500. Dapat diganti per BHP.' })}${medan('cRek', 'Informasi pembayaran (rekening / QRIS)', { v: c.rekening, ta: 1, h: 72, help: 'Tercetak pada invoice.' })}</div></div>
   <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-chat-dots"></i> Konsultasi Online</div>${medan('cKu', 'Alamat halaman konsultasi (Blogger)', { v: c.konsultasi_url, ph: 'https://klinikanda.blogspot.com/p/k.html', help: 'Tautan pasien = alamat ini + ?k=KODE. Gunakan alamat halaman pendek agar tautan singkat. Kosongkan untuk memakai alamat Apps Script.' })}${medan('cKj', 'Masa berlaku tautan (jam)', { v: c.konsultasi_jam, inputmode: 'numeric', help: 'Tautan juga langsung kedaluwarsa saat dokter menyelesaikan percakapan.' })}${medan('cWk', 'Templat pesan WhatsApp konsultasi', { v: c.wa_template_konsultasi, ta: 1, h: 90, help: 'Variabel: {nama} {dokter} {link} {berlaku} {klinik}' })}</div>
   <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-whatsapp"></i> Templat Pesan WhatsApp</div>${medan('cWi', 'Templat invoice', { v: c.wa_template_invoice, ta: 1, h: 72, help: 'Variabel: {nama} {no} {total} {jatuh_tempo} {klinik} {link}' })}${medan('cWr', 'Templat resume medis', { v: c.wa_template_resume, ta: 1, h: 72, help: 'Variabel: {nama} {tanggal} {klinik} {link}' })}</div>
   <div class="mt16"><button class="nx-btn primary" data-act="c.simpan"><i class="bi bi-check2"></i> Simpan Pengaturan</button></div>`);
@@ -1429,8 +1438,8 @@ INP['c.logo'] = el => {
 };
 ACT['c.logoHapus'] = async () => { try { const r = await call('config.simpan', { hapus_logo: true }); M.d.config = r; S.cfg = r; gambarShell(); render(true); toast('Logo bawaan dipakai.'); } catch (e) { galat(e); } };
 ACT['c.simpan'] = async btn => {
-  bersihGalat($('#mTab')); const d = { nama_klinik: val('cNama'), alamat: val('cAl'), telepon: val('cTel'), email: val('cEm'), prefix_invoice: val('cPre'), jatuh_tempo_hari: val('cJt'), buffer_transit_menit: val('cBuf'), rekening: val('cRek'), wa_template_invoice: val('cWi'), wa_template_resume: val('cWr'), konsultasi_url: val('cKu'), konsultasi_jam: val('cKj'), wa_template_konsultasi: val('cWk') };
-  if (d.nama_klinik.length < 3) return bad('cNama', 'Nama klinik wajib diisi.'); if (!/^[A-Za-z0-9]{2,8}$/.test(d.prefix_invoice)) return bad('cPre', '2\u20138 huruf/angka.');
+  bersihGalat($('#mTab')); const d = { nama_klinik: val('cNama'), alamat: val('cAl'), telepon: val('cTel'), email: val('cEm'), prefix_invoice: val('cPre'), jatuh_tempo_hari: val('cJt'), buffer_transit_menit: val('cBuf'), persen_jual_bhp: val('cPj'), rekening: val('cRek'), wa_template_invoice: val('cWi'), wa_template_resume: val('cWr'), konsultasi_url: val('cKu'), konsultasi_jam: val('cKj'), wa_template_konsultasi: val('cWk') };
+  if (d.nama_klinik.length < 3) return bad('cNama', 'Nama klinik wajib diisi.'); if (d.persen_jual_bhp === '' || !(num(d.persen_jual_bhp) >= 0 && num(d.persen_jual_bhp) <= 1000)) return bad('cPj', 'Isi persen 0\u20131000.'); if (!/^[A-Za-z0-9]{2,8}$/.test(d.prefix_invoice)) return bad('cPre', '2\u20138 huruf/angka.');
   if (d.konsultasi_url && !/^https:\/\/[^\s?#]+$/.test(d.konsultasi_url)) return bad('cKu', 'Harus diawali https:// dan tanpa ? atau #.');
   if (M.logo) d.logo_data = M.logo;
   try { const r = await denganSibuk(btn, () => call('config.simpan', d)); M.d.config = r; S.cfg = r; ls.set('nx_cfg', JSON.stringify({ nama_klinik: r.nama_klinik, logo: r.logo })); gambarShell(); render(true); toast('Pengaturan klinik tersimpan.'); } catch (e) { galat(e); }
@@ -1474,6 +1483,7 @@ function gambarLaporan() {
     <div class="nx-kpi"><span class="ic teal"><i class="bi bi-people"></i></span><div class="lab">Pasien unik</div><div class="val">${s.pasienUnik}</div><div class="sub">${s.rataPerHari.toFixed(1).replace('.', ',')} kunjungan/hari</div></div>
     <div class="nx-kpi"><span class="ic ok"><i class="bi bi-cash-stack"></i></span><div class="lab">Sudah dibayar</div><div class="val" style="font-size:22px">${rp(s.dibayar)}</div><div class="sub">dari ${rp(s.total)} terbit</div></div>
     <div class="nx-kpi"><span class="ic bad"><i class="bi bi-wallet2"></i></span><div class="lab">Belum dibayar</div><div class="val" style="font-size:22px">${rp(s.belum)}</div><div class="sub">draft ${rp(s.draftNilai)}</div></div></div>
+  <div class="nx-card mb16"><div class="nx-sec-title mb12"><i class="bi bi-wallet2"></i> Pengeluaran & Selisih</div><div class="nx-grid2"><div><div class="t-cap">Total pengeluaran</div><div class="t-h2 num">${rp(r.pengeluaran.total)}</div></div><div><div class="t-cap">Selisih (dibayar \u2212 pengeluaran)</div><div class="t-h2 num" style="color:${r.pengeluaran.selisih >= 0 ? 'var(--ok-ink)' : 'var(--err-ink)'}">${r.pengeluaran.selisih < 0 ? '\u2212' : ''}${rp(Math.abs(r.pengeluaran.selisih))}</div></div></div>${r.pengeluaran.perKategori.length ? html`<div class="t-sm mt12">${r.pengeluaran.perKategori.map(k => html`<div class="row-between" style="padding:3px 0"><span>${k.kategori}</span><b class="num">${rp(k.jumlah)}</b></div>`)}</div>` : html`<div class="t-sm muted mt8">Belum ada pengeluaran pada periode ini. Catat di menu Pengeluaran.</div>`}</div>
   <div class="nx-insight mb16"><h6><i class="bi bi-stars"></i> Analisis Otomatis</h6><ul>${r.insight.map(x => html`<li>${x}</li>`)}</ul></div>
   <div class="nx-grid2">${box('kunjungan', 'Jumlah Kunjungan', 'bi-graph-up')}${box('pendapatan', 'Pendapatan Invoice', 'bi-cash-coin')}${box('petugas', 'Kunjungan per Petugas', 'bi-person-badge')}${box('tindakan', 'Tindakan Terbanyak', 'bi-bandaid')}</div><div class="mt16">${box('bhp', 'Pemakaian BHP', 'bi-box-seam', '')}</div>`);
   const sp = specLaporan(r, warnaChart(false));
@@ -1498,7 +1508,8 @@ ACT['l.xls'] = () => {
     { nama: 'Per Periode', rows: r.deret.label.map((k, i) => ({ Periode: k, Kunjungan: r.deret.kunjungan[i], Dibayar: r.deret.dibayar[i], 'Belum dibayar': r.deret.belum[i] })) },
     { nama: 'Per Petugas', rows: r.perPetugas.map(x => ({ Petugas: x.nama, Peran: x.peran, Kunjungan: x.jumlah })) },
     { nama: 'Tindakan', rows: r.topTindakan.map(x => ({ Tindakan: x.nama, Jumlah: x.jumlah, Nilai: x.nilai })) },
-    { nama: 'BHP', rows: r.pakaiBhp.map(x => ({ BHP: x.nama, Satuan: x.satuan, Jumlah: x.jumlah, Nilai: x.nilai })) }]);
+    { nama: 'BHP', rows: r.pakaiBhp.map(x => ({ BHP: x.nama, Satuan: x.satuan, Jumlah: x.jumlah, Nilai: x.nilai })) },
+    { nama: 'Pengeluaran', rows: r.pengeluaran.perKategori.map(x => ({ Kategori: x.kategori, Jumlah: x.jumlah })).concat([{ Kategori: 'TOTAL PENGELUARAN', Jumlah: r.pengeluaran.total }, { Kategori: 'SELISIH (dibayar \u2212 pengeluaran)', Jumlah: r.pengeluaran.selisih }]) }]);
   toast('Excel diunduh.');
 };
 
@@ -1951,6 +1962,120 @@ ACT['ps.hapus'] = async t => {
   const p = pasienById(t.dataset.id); if (!p) return;
   if (!await konfirmasi({ title: 'Hapus pasien permanen', msg: p.nama + ' (' + p.no_rm + ') beserta jadwal yang belum berjalan dihapus permanen. Pasien yang sudah punya rekam medis, konsultasi, atau pembayaran tidak dapat dihapus (gunakan Nonaktifkan).', ok: 'Hapus permanen', danger: true })) return;
   try { await call('pasien.hapus', { pasien_id: p.pasien_id, permanen: true }); MD.close('mdl'); S.pasien = S.pasien.filter(x => x.pasien_id !== p.pasien_id); S.jadwal = S.jadwal.filter(x => x.pasien_id !== p.pasien_id); if (typeof P !== 'undefined') P.sel = ''; render(true); toast('Pasien dihapus.', 'warn'); } catch (e) { galat(e); }
+};
+
+/*@@FILE 10_pengeluaran.js*/
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 Pengeluaran (khusus Owner) + Beli BHP \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+NAV.keluar = { ic: 'bi-wallet2', t: 'Pengeluaran' };
+RUTE_PERAN.keluar = 'S';
+const KL = { bulan: '', d: null, nota: null };
+const BLN_PENUH = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const uang = v => Number(String(v == null ? '' : v).replace(/[^\d]/g, '')) || 0;
+const bulanLabel = b => { const p = b.split('-'); return BLN_PENUH[+p[1] - 1] + ' ' + p[0]; };
+const geserBulan = (b, n) => { const p = b.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1 + n, 1)); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); };
+
+VIEWS.keluar = function (v) {
+  KL.bulan = KL.bulan || today().slice(0, 7);
+  put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Pengeluaran</h1><p>Catat uang keluar klinik: pembelian BHP, gaji, transport, sewa, dan lainnya. Hanya terlihat oleh Owner.</p></div>
+    <div class="wrap-gap"><button class="nx-btn secondary" data-act="kl.beli"><i class="bi bi-cart-plus"></i> Beli BHP</button><button class="nx-btn primary" data-act="kl.baru"><i class="bi bi-plus-lg"></i> Catat Pengeluaran</button></div></div><div id="klBody">${skel(3, 80)}</div>`);
+  muatKeluar();
+};
+async function muatKeluar() {
+  try { KL.d = await call('keluar.daftar', { bulan: KL.bulan }, { fresh: 20000 }); if (S.route === '/keluar') gambarKeluar(); }
+  catch (e) { galat(e); put('#klBody', kosong('bi-wifi-off', 'Gagal memuat', e.message)); }
+}
+function gambarKeluar() {
+  const d = KL.d, b = $('#klBody'); if (!b || !d) return; const maks = d.perKategori.length ? d.perKategori[0].jumlah : 1;
+  put(b, html`<div class="row-between mb16"><div class="wrap-gap"><button class="nx-btn secondary sm icon" data-act="kl.bln" data-d="-1" aria-label="Bulan sebelumnya"><i class="bi bi-chevron-left"></i></button><b class="t-body-lg" style="min-width:150px;text-align:center">${bulanLabel(d.bulan)}</b><button class="nx-btn secondary sm icon" data-act="kl.bln" data-d="1" aria-label="Bulan berikutnya" ${d.bulan >= today().slice(0, 7) ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button></div></div>
+  <div class="nx-card mb16"><div class="row-between"><div><div class="t-cap">Total pengeluaran ${bulanLabel(d.bulan)}</div><div class="t-h1 num">${rp(d.total)}</div></div><span class="nx-badge nodot">${d.rows.length} catatan</span></div>
+    ${d.perKategori.length ? html`<div class="mt12">${d.perKategori.map(k => html`<div class="mb8"><div class="row-between t-sm"><span>${k.kategori}</span><b class="num">${rp(k.jumlah)}</b></div><div style="height:6px;border-radius:6px;background:var(--line,#e3e8ee);overflow:hidden"><div style="height:100%;width:${Math.max(3, Math.round(k.jumlah / maks * 100))}%;background:var(--p,#2f4a9e)"></div></div></div>`)}</div>` : ''}</div>
+  ${d.rows.length ? html`<div class="nx-card pad0"><div class="nx-list">${d.rows.map(x => html`<div class="nx-row" style="align-items:flex-start;padding:12px 16px"><div class="grow"><div class="fw6">${x.uraian}</div><div class="t-sm muted">${tglS(x.tanggal)} \u2022 <span class="nx-badge nodot">${x.kategori}</span>${x.pemasok ? ' \u2022 ' + x.pemasok : ''}${x.metode ? ' \u2022 ' + x.metode : ''}</div></div>
+      <div style="text-align:right"><b class="num">${rp(x.jumlah)}</b><div class="wrap-gap" style="justify-content:flex-end;margin-top:4px">${x.punya_nota ? html`<button class="nx-btn ghost sm icon" data-act="kl.nota" data-id="${x.pengeluaran_id}" aria-label="Lihat nota"><i class="bi bi-image"></i></button>` : ''}${x.dari_pembelian ? '' : html`<button class="nx-btn ghost sm icon" data-act="kl.edit" data-id="${x.pengeluaran_id}" aria-label="Ubah"><i class="bi bi-pencil"></i></button>`}<button class="nx-btn ghost sm icon" style="color:var(--err-ink)" data-act="kl.hapus" data-id="${x.pengeluaran_id}" aria-label="Hapus"><i class="bi bi-trash"></i></button></div></div></div>`)}</div></div>`
+    : html`<div class="nx-card">${kosong('bi-wallet2', 'Belum ada pengeluaran', 'Catat pengeluaran pertama bulan ini.', html`<button class="nx-btn primary" data-act="kl.baru">Catat Pengeluaran</button>`)}</div>`}`);
+}
+ACT['kl.bln'] = t => { KL.bulan = geserBulan(KL.bulan, +t.dataset.d); KL.d = null; put('#klBody', skel(3, 80)); muatKeluar(); };
+
+// \u2500\u2500 Form pengeluaran \u2500\u2500
+const KL_NOTA = { data: '', hapus: false };
+function bidangNota(ada) {
+  return html`<div class="nx-field"><label class="nx-lab" for="klNota"><span>Foto nota</span><span class="opt">opsional</span></label><input type="file" id="klNota" class="nx-in" accept="image/*" data-ch="kl.notaPilih">${ada ? html`<label class="nx-check mt8"><input type="checkbox" id="klNotaDel" data-ch="kl.notaDel"><span>Hapus foto nota yang tersimpan</span></label>` : ''}<div class="nx-help" id="klNotaInfo"></div></div>`;
+}
+INP['kl.notaPilih'] = async el => {
+  KL_NOTA.data = ''; const f = el.files[0]; if (!f) return $('#klNotaInfo').textContent = '';
+  try { KL_NOTA.data = await kecilkanFoto(f); $('#klNotaInfo').textContent = 'Foto siap dikirim (' + Math.round(KL_NOTA.data.length / 1024) + ' KB).'; } catch (e) { el.value = ''; $('#klNotaInfo').textContent = ''; toast(e.message, 'err'); }
+};
+INP['kl.notaDel'] = el => { KL_NOTA.hapus = el.checked; };
+ACT['kl.baru'] = () => formKeluar(null);
+ACT['kl.edit'] = t => formKeluar(KL.d.rows.find(x => x.pengeluaran_id === t.dataset.id));
+function formKeluar(x) {
+  const d = KL.d || { kategori: ['Lain-lain'], metode: ['Tunai'] }; KL_NOTA.data = ''; KL_NOTA.hapus = false;
+  MD.open('mdl', { title: x ? 'Ubah Pengeluaran' : 'Catat Pengeluaran', size: 'sm', body: html`
+    <div class="nx-grid2" style="gap:0 16px">${medan('klTgl', 'Tanggal', { type: 'date', v: x ? x.tanggal : today(), req: 1 })}
+    <div class="nx-field"><label class="nx-lab" for="klKat"><span>Kategori <span class="req">*</span></span></label><select id="klKat" class="nx-sel">${d.kategori.map(k => html`<option ${x && x.kategori === k ? 'selected' : ''}>${k}</option>`)}</select></div></div>
+    ${medan('klUr', 'Uraian', { v: x ? x.uraian : '', req: 1, max: 200, ph: 'mis. Sewa ruko Oktober, Transport petugas' })}
+    ${medan('klJml', 'Jumlah (Rp)', { v: x ? x.jumlah : '', inputmode: 'numeric', req: 1 })}
+    <div class="nx-grid2" style="gap:0 16px">${medan('klPem', 'Dibayar kepada', { v: x ? x.pemasok : '', opt: 1, max: 100, ph: 'toko / penerima' })}
+    <div class="nx-field"><label class="nx-lab" for="klMet">Metode bayar</label><select id="klMet" class="nx-sel">${d.metode.map(k => html`<option ${x && x.metode === k ? 'selected' : ''}>${k}</option>`)}</select></div></div>
+    ${bidangNota(x && x.punya_nota)}`,
+    footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="kl.simpan" data-id="${x ? x.pengeluaran_id : ''}"><i class="bi bi-check2"></i> Simpan</button>`,
+    onShown: () => { const e = $('#klTgl'); if (e) e.max = today(); } });
+}
+ACT['kl.simpan'] = async btn => {
+  bersihGalat($('#mdl'));
+  const dta = { pengeluaran_id: btn.dataset.id, tanggal: val('klTgl'), kategori: val('klKat'), uraian: val('klUr'), jumlah: uang(val('klJml')), pemasok: val('klPem'), metode: val('klMet') };
+  let ok = true;
+  if (!dta.tanggal || dta.tanggal > today()) ok = bad('klTgl', 'Tanggal tidak valid.');
+  if (dta.uraian.length < 3) ok = bad('klUr', 'Uraian minimal 3 karakter.');
+  if (dta.jumlah < 1) ok = bad('klJml', 'Jumlah harus lebih dari 0.');
+  if (!ok) return;
+  if (KL_NOTA.data) dta.nota = KL_NOTA.data; else if (KL_NOTA.hapus) dta.hapus_nota = true;
+  try { await denganSibuk(btn, () => call('keluar.simpan', dta)); MD.close('mdl'); KL.d = null; toast('Pengeluaran tersimpan.'); muatKeluar(); } catch (e) { galat(e); }
+};
+ACT['kl.hapus'] = async t => {
+  const x = KL.d.rows.find(r => r.pengeluaran_id === t.dataset.id); if (!x) return;
+  if (!await konfirmasi({ title: 'Hapus pengeluaran', msg: x.uraian + ' \u2014 ' + rp(x.jumlah) + '. ' + (x.dari_pembelian ? 'Stok BHP TIDAK ikut berkurang; koreksi stok di Master Data \u2192 BHP & Stok bila perlu. ' : '') + 'Tindakan ini tercatat di Audit Log.', ok: 'Hapus', danger: true })) return;
+  try { await call('keluar.hapus', { pengeluaran_id: x.pengeluaran_id }); KL.d = null; toast('Pengeluaran dihapus.', 'warn'); muatKeluar(); } catch (e) { galat(e); }
+};
+ACT['kl.nota'] = async t => {
+  try { const r = await call('keluar.nota', { pengeluaran_id: t.dataset.id }); MD.open('mdl', { title: 'Foto Nota', size: 'lg', body: html`<img src="data:${r.mime};base64,${r.base64}" alt="Foto nota" style="max-width:100%;border-radius:12px">`, footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Tutup</button>` }); } catch (e) { galat(e); }
+};
+
+// \u2500\u2500 Beli BHP: stok + harga beli + pengeluaran sekaligus \u2500\u2500
+ACT['kl.beli'] = () => formBeliBhp('');
+ACT['bhp.beliForm'] = t => formBeliBhp(t.dataset.id);
+async function formBeliBhp(id) {
+  let md; try { md = await call('master.semua', {}, { fresh: 30000 }); } catch (e) { return galat(e); }
+  const l = md.bhp.filter(x => x.aktif); if (!l.length) return toast('Belum ada BHP aktif. Tambahkan dulu di Master Data.', 'warn');
+  const x0 = l.find(b => b.bhp_id === id) || l[0]; KL_NOTA.data = ''; KL_NOTA.hapus = false; KL.bhpList = l;
+  MD.open('mdl', { title: 'Beli BHP', size: 'sm', body: html`
+    <div class="nx-field"><label class="nx-lab" for="blB"><span>BHP <span class="req">*</span></span></label><select id="blB" class="nx-sel" data-ch="kl.blPilih">${l.map(b => html`<option value="${b.bhp_id}" ${b.bhp_id === x0.bhp_id ? 'selected' : ''}>${b.nama} (stok ${b.stok} ${b.satuan})</option>`)}</select></div>
+    <div class="nx-grid2" style="gap:0 16px">${medan('blQty', 'Jumlah beli', { inputmode: 'numeric', req: 1, v: '' })}${medan('blHrg', 'Harga beli / satuan (Rp)', { inputmode: 'numeric', req: 1, v: x0.harga_beli || '' })}</div>
+    <div class="nx-alert info mb12" id="blPrev"><i class="bi bi-calculator"></i><div></div></div>
+    <div class="nx-grid2" style="gap:0 16px">${medan('blTgl', 'Tanggal', { type: 'date', v: today(), req: 1 })}
+    <div class="nx-field"><label class="nx-lab" for="blMet">Metode bayar</label><select id="blMet" class="nx-sel">${['Tunai', 'Transfer', 'QRIS', 'Lainnya'].map(k => html`<option>${k}</option>`)}</select></div></div>
+    ${medan('blPem', 'Dibeli dari', { opt: 1, max: 100, ph: 'apotek / distributor' })}
+    ${bidangNota(false)}`,
+    footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="kl.beliSimpan"><i class="bi bi-check2"></i> Simpan Pembelian</button>`,
+    onShown: () => { const e = $('#blTgl'); if (e) e.max = today(); ['blQty', 'blHrg'].forEach(i => $('#' + i).addEventListener('input', prevBeli)); prevBeli(); } });
+}
+INP['kl.blPilih'] = el => { const b = (KL.bhpList || []).find(x => x.bhp_id === el.value); if (b && b.harga_beli) $('#blHrg').value = b.harga_beli; prevBeli(); };
+function prevBeli() {
+  const box = $('#blPrev'); if (!box) return; const b = (KL.bhpList || []).find(x => x.bhp_id === val('blB')); if (!b) return;
+  const q = uang(val('blQty')), h = uang(val('blHrg')), ps = b.persen_efektif;
+  const jual = h > 0 ? Math.max(500, Math.round(h * (1 + ps / 100) / 500) * 500) : 0;
+  box.lastElementChild.innerHTML = 'Total pengeluaran: <b>' + rp(q * h) + '</b>' + (h > 0 ? '<br>Harga jual ke pasien menjadi <b>' + rp(jual) + '</b> (+' + ps + '%) \u2014 berlaku untuk pemakaian berikutnya.' : '');
+}
+ACT['kl.beliSimpan'] = async btn => {
+  bersihGalat($('#mdl'));
+  const d = { bhp_id: val('blB'), qty: uang(val('blQty')), harga_satuan: uang(val('blHrg')), tanggal: val('blTgl'), metode: val('blMet'), pemasok: val('blPem') };
+  let ok = true; if (d.qty < 1) ok = bad('blQty', 'Isi jumlah beli.'); if (d.harga_satuan < 1) ok = bad('blHrg', 'Isi harga beli.'); if (!d.tanggal || d.tanggal > today()) ok = bad('blTgl', 'Tanggal tidak valid.'); if (!ok) return;
+  if (KL_NOTA.data) d.nota = KL_NOTA.data;
+  try {
+    const r = await denganSibuk(btn, () => call('bhp.beli', d)); MD.close('mdl'); KL.d = null;
+    if (typeof M !== 'undefined' && M.d && M.d.bhp) { const i = M.d.bhp.findIndex(x => x.bhp_id === r.bhp.bhp_id); if (i >= 0) M.d.bhp[i] = r.bhp; segarkanLokal(); }
+    toast('Tercatat: stok ' + r.bhp.nama + ' kini ' + r.bhp.stok + ', harga jual ' + rp(r.bhp.harga_jual) + '.');
+    if (S.route === '/keluar') muatKeluar(); else if (S.route === '/master') { M.d = null; try { M.d = await call('master.semua', {}, { fresh: 1 }); gambarMaster(); } catch (e) { /* abaikan */ } }
+  } catch (e) { galat(e); }
 };
 
 /*@@FILE 99_boot.js*/
