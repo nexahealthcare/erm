@@ -281,7 +281,7 @@ function ubahTema() {
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 Login, bootstrap, shell, router \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 const NAV = {
   home: { ic: 'bi-grid-1x2-fill', t: 'Ringkasan' }, jadwal: { ic: 'bi-calendar-check-fill', t: 'Jadwal' }, pasien: { ic: 'bi-people-fill', t: 'Pasien' },
-  tagihan: { ic: 'bi-receipt', t: 'Tagihan' }, laporan: { ic: 'bi-bar-chart-line-fill', t: 'Laporan' }, master: { ic: 'bi-database-fill-gear', t: 'Master Data' },
+  tagihan: { ic: 'bi-receipt', t: 'Tagihan' }, laporan: { ic: 'bi-bar-chart-line-fill', t: 'Laporan Keuangan' }, master: { ic: 'bi-database-fill-gear', t: 'Master Data' },
   audit: { ic: 'bi-shield-check', t: 'Audit Log' }, konsul: { ic: 'bi-chat-dots-fill', t: 'Konsultasi' }, profil: { ic: 'bi-person-circle', t: 'Profil' }
 };
 function menuPeran() {
@@ -511,7 +511,7 @@ VIEWS.profil = function (v) {
   const u = S.user, tema = document.documentElement.getAttribute('data-theme');
   put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Profil Saya</h1></div></div>
   <div class="nx-grid2"><div class="nx-card accent"><div class="nx-pt mb16"><div class="nx-ava lg">${inisial(u.nama)}</div><div><div class="t-h3">${u.nama}</div><div class="nx-badge info nodot mt8">${PERAN_LABEL[u.peran]}</div></div></div>
-    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.5</dd></dl>
+    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.6</dd></dl>
     <div class="wrap-gap mt24"><button class="nx-btn secondary" data-act="pw.form"><i class="bi bi-key"></i> Ganti Password</button><button class="nx-btn danger" data-act="app.keluar"><i class="bi bi-box-arrow-right"></i> Keluar</button></div></div>
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-pen"></i> Tanda Tangan Saya</div>
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
@@ -1451,7 +1451,7 @@ const labelSeri = (k, g) => g === 'bulan' ? BLN[+k.slice(5, 7) - 1] + ' ' + k.sl
 function setPreset(p) { const t = today(); L.preset = p; L.sampai = t; if (p === 'bulan') L.dari = t.slice(0, 8) + '01'; else if (p === 'tahun') L.dari = t.slice(0, 4) + '-01-01'; else L.dari = addDays(t, -(+p - 1)); }
 VIEWS.laporan = function (v) {
   if (!L.dari) setPreset('30');
-  put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Laporan Kinerja</h1><p>Kunjungan, pendapatan invoice, beban petugas, tindakan, dan pemakaian BHP.</p></div><div class="wrap-gap"><button class="nx-btn secondary" data-act="l.xls"><i class="bi bi-file-earmark-excel"></i> Excel</button><button class="nx-btn primary" data-act="l.pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button></div></div>
+  put(v, html`${tabLaporan()}<div class="nx-page-h"><div><h1 class="t-h1">Laporan Operasional</h1><p>Kunjungan, pendapatan invoice, beban petugas, tindakan, dan pemakaian BHP.</p></div><div class="wrap-gap"><button class="nx-btn secondary" data-act="l.xls"><i class="bi bi-file-earmark-excel"></i> Excel</button><button class="nx-btn primary" data-act="l.pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button></div></div>
   <div class="nx-card pad-sm mb16"><div class="wrap-gap mb12">${[['7', '7 hari'], ['30', '30 hari'], ['90', '90 hari'], ['bulan', 'Bulan ini'], ['tahun', 'Tahun ini']].map(x => html`<button class="nx-chip ${L.preset === x[0] ? 'on' : ''}" data-act="l.preset" data-v="${x[0]}">${x[1]}</button>`)}</div>
     <div class="row-gap" style="flex-wrap:wrap"><div style="min-width:140px;flex:1"><label class="nx-lab" for="lDari">Dari</label><input id="lDari" type="date" class="nx-in" value="${L.dari}" data-ch="l.tgl"></div><div style="min-width:140px;flex:1"><label class="nx-lab" for="lSam">Sampai</label><input id="lSam" type="date" class="nx-in" value="${L.sampai}" data-ch="l.tgl"></div>
     <div style="flex:2;min-width:240px"><label class="nx-lab">Kelompokkan per</label><div class="nx-seg">${[['hari', 'Hari'], ['minggu', 'Minggu'], ['bulan', 'Bulan']].map(x => html`<button class="${L.grain === x[0] ? 'on' : ''}" data-act="l.grain" data-v="${x[0]}">${x[1]}</button>`)}</div></div></div></div>
@@ -1483,7 +1483,6 @@ function gambarLaporan() {
     <div class="nx-kpi"><span class="ic teal"><i class="bi bi-people"></i></span><div class="lab">Pasien unik</div><div class="val">${s.pasienUnik}</div><div class="sub">${s.rataPerHari.toFixed(1).replace('.', ',')} kunjungan/hari</div></div>
     <div class="nx-kpi"><span class="ic ok"><i class="bi bi-cash-stack"></i></span><div class="lab">Sudah dibayar</div><div class="val" style="font-size:22px">${rp(s.dibayar)}</div><div class="sub">dari ${rp(s.total)} terbit</div></div>
     <div class="nx-kpi"><span class="ic bad"><i class="bi bi-wallet2"></i></span><div class="lab">Belum dibayar</div><div class="val" style="font-size:22px">${rp(s.belum)}</div><div class="sub">draft ${rp(s.draftNilai)}</div></div></div>
-  <div class="nx-card mb16"><div class="nx-sec-title mb12"><i class="bi bi-wallet2"></i> Pengeluaran & Selisih</div><div class="nx-grid2"><div><div class="t-cap">Total pengeluaran</div><div class="t-h2 num">${rp(r.pengeluaran.total)}</div></div><div><div class="t-cap">Selisih (dibayar \u2212 pengeluaran)</div><div class="t-h2 num" style="color:${r.pengeluaran.selisih >= 0 ? 'var(--ok-ink)' : 'var(--err-ink)'}">${r.pengeluaran.selisih < 0 ? '\u2212' : ''}${rp(Math.abs(r.pengeluaran.selisih))}</div></div></div>${r.pengeluaran.perKategori.length ? html`<div class="t-sm mt12">${r.pengeluaran.perKategori.map(k => html`<div class="row-between" style="padding:3px 0"><span>${k.kategori}</span><b class="num">${rp(k.jumlah)}</b></div>`)}</div>` : html`<div class="t-sm muted mt8">Belum ada pengeluaran pada periode ini. Catat di menu Pengeluaran.</div>`}</div>
   <div class="nx-insight mb16"><h6><i class="bi bi-stars"></i> Analisis Otomatis</h6><ul>${r.insight.map(x => html`<li>${x}</li>`)}</ul></div>
   <div class="nx-grid2">${box('kunjungan', 'Jumlah Kunjungan', 'bi-graph-up')}${box('pendapatan', 'Pendapatan Invoice', 'bi-cash-coin')}${box('petugas', 'Kunjungan per Petugas', 'bi-person-badge')}${box('tindakan', 'Tindakan Terbanyak', 'bi-bandaid')}</div><div class="mt16">${box('bhp', 'Pemakaian BHP', 'bi-box-seam', '')}</div>`);
   const sp = specLaporan(r, warnaChart(false));
@@ -2076,6 +2075,89 @@ ACT['kl.beliSimpan'] = async btn => {
     toast('Tercatat: stok ' + r.bhp.nama + ' kini ' + r.bhp.stok + ', harga jual ' + rp(r.bhp.harga_jual) + '.');
     if (S.route === '/keluar') muatKeluar(); else if (S.route === '/master') { M.d = null; try { M.d = await call('master.semua', {}, { fresh: 1 }); gambarMaster(); } catch (e) { /* abaikan */ } }
   } catch (e) { galat(e); }
+};
+
+/*@@FILE 11_keuangan.js*/
+// \u2500\u2500 Laporan Keuangan (Owner): pendapatan, pengeluaran, saldo + buku kas \u2500\u2500
+NAV.laporan.t = 'Laporan Keuangan';
+const KEU = { r: null };
+function tabLaporan() {
+  return html`<div class="nx-seg mb16" style="max-width:340px">${[['keu', 'Keuangan'], ['ops', 'Operasional']].map(x => html`<button class="${(L.tab || 'keu') === x[0] ? 'on' : ''}" data-act="l.tab" data-v="${x[0]}">${x[1]}</button>`)}</div>`;
+}
+ACT['l.tab'] = t => { L.tab = t.dataset.v; render(true); };
+const _viewOps = VIEWS.laporan;
+VIEWS.laporan = function (v) {
+  if (!L.tab) L.tab = 'keu';
+  if (L.tab === 'ops') return _viewOps(v);
+  if (!L.dari) setPreset('bulan');
+  put(v, html`${tabLaporan()}<div class="nx-page-h"><div><h1 class="t-h1">Laporan Keuangan</h1><p>Pendapatan (uang masuk dari pasien), pengeluaran, dan saldo kas.</p></div><div class="wrap-gap"><button class="nx-btn secondary" data-act="k.xls"><i class="bi bi-file-earmark-excel"></i> Excel</button><button class="nx-btn primary" data-act="k.pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button></div></div>
+  <div class="nx-card pad-sm mb16"><div class="wrap-gap mb12">${[['bulan', 'Bulan ini'], ['lalu', 'Bulan lalu'], ['90', '90 hari'], ['tahun', 'Tahun ini']].map(x => html`<button class="nx-chip ${L.preset === x[0] ? 'on' : ''}" data-act="k.preset" data-v="${x[0]}">${x[1]}</button>`)}</div>
+    <div class="row-gap" style="flex-wrap:wrap"><div style="min-width:140px;flex:1"><label class="nx-lab" for="lDari">Dari</label><input id="lDari" type="date" class="nx-in" value="${L.dari}" data-ch="k.tgl"></div><div style="min-width:140px;flex:1"><label class="nx-lab" for="lSam">Sampai</label><input id="lSam" type="date" class="nx-in" value="${L.sampai}" data-ch="k.tgl"></div>
+    <div style="flex:2;min-width:240px"><label class="nx-lab">Grafik per</label><div class="nx-seg">${[['hari', 'Hari'], ['minggu', 'Minggu'], ['bulan', 'Bulan']].map(x => html`<button class="${L.grain === x[0] ? 'on' : ''}" data-act="k.grain" data-v="${x[0]}">${x[1]}</button>`)}</div></div></div></div>
+  <div id="kBody">${skel(3, 100)}</div>`);
+  muatKeuangan();
+};
+function setPresetKeu(p) {
+  const t = today();
+  if (p === 'lalu') { const y = +t.slice(0, 4), m = +t.slice(5, 7); const d1 = new Date(Date.UTC(y, m - 2, 1)), d2 = new Date(Date.UTC(y, m - 1, 0)); L.preset = 'lalu'; L.dari = d1.toISOString().slice(0, 10); L.sampai = d2.toISOString().slice(0, 10); } else setPreset(p);
+}
+ACT['k.preset'] = t => { setPresetKeu(t.dataset.v); render(true); };
+ACT['k.grain'] = t => { L.grain = t.dataset.v; render(true); };
+INP['k.tgl'] = () => { const a = val('lDari'), b = val('lSam'); if (a && b && a <= b) { L.dari = a; L.sampai = b; L.preset = ''; render(true); } else toast('Rentang tanggal tidak valid.', 'warn'); };
+async function muatKeuangan() {
+  try { const r = await call('keuangan', { dari: L.dari, sampai: L.sampai, grain: L.grain }, { fresh: 30000 }); if (S.route !== '/laporan' || L.tab === 'ops') return; KEU.r = r; gambarKeuangan(); } catch (e) { galat(e); put('#kBody', kosong('bi-wifi-off', 'Gagal memuat laporan', e.message)); }
+}
+const deltaKeu = (now, prev, naikBaik) => {
+  if (!prev) return html`<span class="muted">periode sebelumnya: ${rp(prev || 0)}</span>`;
+  const d = Math.round((now - prev) / prev * 100), baik = naikBaik ? d >= 0 : d <= 0;
+  return html`<span style="color:${baik ? 'var(--ok-ink)' : 'var(--err-ink)'}">${d >= 0 ? '\u25b2' : '\u25bc'} ${Math.abs(d)}%</span> <span class="muted">dari ${rp(prev)}</span>`;
+};
+function gambarKeuangan() {
+  const r = KEU.r, s = r.ringkas, b = $('#kBody'); if (!b) return; hapusChart();
+  const w = warnaChart(false), lab = r.deret.label.map(k => labelSeri(k, r.grain));
+  const tabelRing = (judul, ikon, baris, kosongTeks) => html`<div class="nx-card"><div class="nx-sec-title mb12"><i class="bi ${ikon}"></i> ${judul}</div>${baris.length ? baris.map(x => html`<div class="row-between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span>${x[0]}</span><b class="num">${rp(x[1])}</b></div>`) : html`<div class="muted t-sm">${kosongTeks}</div>`}</div>`;
+  put(b, html`<div class="nx-kpis">
+    <div class="nx-kpi"><span class="ic ok"><i class="bi bi-arrow-down-circle"></i></span><div class="lab">Pendapatan</div><div class="val" style="font-size:22px">${rp(s.pendapatan)}</div><div class="sub">${deltaKeu(s.pendapatan, s.pendapatanSebelumnya, true)}</div></div>
+    <div class="nx-kpi"><span class="ic bad"><i class="bi bi-arrow-up-circle"></i></span><div class="lab">Pengeluaran</div><div class="val" style="font-size:22px">${rp(s.pengeluaran)}</div><div class="sub">${deltaKeu(s.pengeluaran, s.pengeluaranSebelumnya, false)}</div></div>
+    <div class="nx-kpi"><span class="ic teal"><i class="bi bi-piggy-bank"></i></span><div class="lab">Saldo periode</div><div class="val" style="font-size:22px;color:${s.saldoPeriode >= 0 ? 'var(--ok-ink)' : 'var(--err-ink)'}">${rp(s.saldoPeriode)}</div><div class="sub">pendapatan \u2212 pengeluaran</div></div></div>
+  <div class="nx-card mb16"><div class="nx-grid2"><div><div class="t-cap">Saldo kas awal periode</div><div class="t-h2 num">${rp(s.saldoBuka)}</div></div><div><div class="t-cap">Saldo kas akhir periode</div><div class="t-h2 num" style="color:${s.saldoTutup >= 0 ? 'var(--ok-ink)' : 'var(--err-ink)'}">${rp(s.saldoTutup)}</div></div></div>
+    <div class="row-between mt12 t-sm muted" style="gap:8px;flex-wrap:wrap"><span>Saldo kumulatif = saldo awal klinik (${rp(s.saldoAwal)}) + seluruh pendapatan \u2212 seluruh pengeluaran.</span><button class="nx-btn secondary sm" data-act="k.saldoAwal"><i class="bi bi-pencil"></i> Atur saldo awal</button></div>
+    <div class="t-sm mt12"><i class="bi bi-hourglass-split"></i> Piutang pasien (belum dibayar): <b>${rp(s.piutang)}</b> dari ${s.jumlahPiutang} invoice \u2014 belum dihitung sebagai pendapatan.</div></div>
+  <div class="nx-card mb16"><div class="nx-sec-title mb12"><i class="bi bi-graph-up"></i> Pendapatan vs Pengeluaran</div><div class="nx-chart sm" id="w_kas"><canvas id="c_kas"></canvas></div></div>
+  <div class="nx-grid2 mb16">${tabelRing('Pendapatan per jenis layanan', 'bi-clipboard2-pulse', r.perJenis.map(x => [x.nama, x.jumlah]), 'Belum ada pendapatan.')}${tabelRing('Pendapatan per metode bayar', 'bi-credit-card', r.perMetode.map(x => [x.nama, x.jumlah]), 'Belum ada pendapatan.')}</div>
+  <div class="mb16">${tabelRing('Pengeluaran per kategori', 'bi-wallet2', r.perKategori.map(x => [x.kategori, x.jumlah]), 'Belum ada pengeluaran pada periode ini.')}</div>
+  <div class="nx-card pad0"><div class="nx-sec-title" style="padding:16px 16px 8px"><i class="bi bi-journal-text"></i> Buku Kas <span class="muted t-sm">(${r.bukuKasTotal} transaksi${r.bukuKasTotal > r.bukuKas.length ? ', menampilkan ' + r.bukuKas.length + ' terbaru' : ''})</span></div>
+    ${r.bukuKas.length ? html`<div class="nx-tbl-wrap"><table class="nx-tbl"><thead><tr><th>Tanggal</th><th>Uraian</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo</th></tr></thead><tbody>
+      <tr><td colspan="4" class="muted">Saldo awal periode</td><td class="r num">${rp(s.saldoBuka)}</td></tr>
+      ${r.bukuKas.map(x => html`<tr><td class="num" style="white-space:nowrap">${tglPendek(x.tanggal)}</td><td><span class="muted t-sm">${x.kategori}</span><br>${x.uraian}</td><td class="r num" style="color:var(--ok-ink)">${x.arah === 'MASUK' ? rp(x.jumlah) : ''}</td><td class="r num" style="color:var(--err-ink)">${x.arah === 'KELUAR' ? rp(x.jumlah) : ''}</td><td class="r num">${rp(x.saldo)}</td></tr>`)}</tbody></table></div>` : html`<div style="padding:0 16px 16px" class="muted">Belum ada transaksi pada periode ini.</div>`}</div>`);
+  const sp = specKeu(r, w); if (sp) mkChart($('#c_kas'), sp); else chartKosong($('#w_kas'));
+}
+function specKeu(r, w) {
+  if (!r.deret.masuk.concat(r.deret.keluar).some(x => x > 0)) return null;
+  const lab = r.deret.label.map(k => labelSeri(k, r.grain));
+  return { type: 'bar', data: { labels: lab, datasets: [{ label: 'Pendapatan', data: r.deret.masuk, backgroundColor: w.t, borderRadius: 4 }, { label: 'Pengeluaran', data: r.deret.keluar, backgroundColor: w.err, borderRadius: 4 }] }, options: { scales: { y: { beginAtZero: true, ticks: { callback: v => v >= 1e6 ? (v / 1e6) + ' jt' : (v >= 1e3 ? (v / 1e3) + ' rb' : v) } } } } };
+}
+ACT['k.saldoAwal'] = () => {
+  MD.open('mdl', { title: 'Saldo Awal Kas', size: 'sm', body: html`<p class="t-sm muted">Isi dengan jumlah uang kas klinik saat mulai memakai NexaERM (mis. modal awal). Kosongkan / 0 bila mulai dari nol. Angka ini hanya memengaruhi saldo kumulatif.</p>${medan('kSA', 'Saldo awal (Rp)', { v: KEU.r ? KEU.r.ringkas.saldoAwal : 0, inputmode: 'numeric' })}`,
+    footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="k.saldoSimpan"><i class="bi bi-check2"></i> Simpan</button>` });
+};
+ACT['k.saldoSimpan'] = async btn => {
+  bersihGalat($('#mdl')); const t = val('kSA').replace(/[.\s]/g, '').replace(',', '.'), n = t === '' ? 0 : Number(t);
+  if (!isFinite(n)) return bad('kSA', 'Harus berupa angka.');
+  try { await denganSibuk(btn, () => call('config.simpan', { saldo_awal: String(Math.round(n)) })); MD.close('mdl'); toast('Saldo awal tersimpan.'); render(true); } catch (e) { galat(e); }
+};
+ACT['k.pdf'] = async btn => {
+  try { await denganSibuk(btn, async () => { const d = await call('keuangan.pdf', { dari: L.dari, sampai: L.sampai, grain: L.grain }); unduhBlob(b64ToBlob(d.base64, d.mime), d.nama_file); toast('Laporan keuangan PDF diunduh.'); }); } catch (e) { galat(e); }
+};
+ACT['k.xls'] = () => {
+  const r = KEU.r; if (!r) return; const s = r.ringkas;
+  buatExcel('Laporan_Keuangan_' + r.dari + '_' + r.sampai + '.xlsx', [
+    { nama: 'Ringkasan', rows: [['Periode', r.dari + ' s/d ' + r.sampai], ['Saldo awal periode', s.saldoBuka], ['Pendapatan', s.pendapatan], ['Pengeluaran', s.pengeluaran], ['Saldo periode', s.saldoPeriode], ['Saldo akhir', s.saldoTutup], ['Piutang', s.piutang]] },
+    { nama: 'Per Periode', rows: r.deret.label.map((k, i) => ({ Periode: k, Pendapatan: r.deret.masuk[i], Pengeluaran: r.deret.keluar[i], Selisih: r.deret.masuk[i] - r.deret.keluar[i] })) },
+    { nama: 'Pendapatan', rows: r.perJenis.map(x => ({ Jenis: x.nama, Jumlah: x.jumlah })).concat(r.perMetode.map(x => ({ Jenis: 'Metode: ' + x.nama, Jumlah: x.jumlah }))) },
+    { nama: 'Pengeluaran', rows: r.perKategori.map(x => ({ Kategori: x.kategori, Jumlah: x.jumlah })) },
+    { nama: 'Buku Kas', rows: r.bukuKas.map(x => ({ Tanggal: x.tanggal, Kategori: x.kategori, Uraian: x.uraian, Metode: x.metode, Masuk: x.arah === 'MASUK' ? x.jumlah : '', Keluar: x.arah === 'KELUAR' ? x.jumlah : '', Saldo: x.saldo })) }]);
+  toast('Excel diunduh.');
 };
 
 /*@@FILE 99_boot.js*/
