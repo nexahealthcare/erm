@@ -66,8 +66,12 @@ const isiTemplate = (t, o) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => o[
 
 // \u2500\u2500 State global \u2500\u2500
 const S = { token: '', user: null, cfg: {}, staff: [], tarif: [], bhp: [], pasien: [], jadwal: [], hariIni: '', route: '', pend: 0, ready: false };
-const isSuper = () => S.user && S.user.peran === 'SUPERADMIN';
-const isKelola = () => S.user && (S.user.peran === 'SUPERADMIN' || S.user.peran === 'ADMIN');
+const punyaPeran = r => !!S.user && (S.user.peran === r || (S.user.peran_tambahan || []).indexOf(r) >= 0);   // peran utama ATAU tambahan
+const isSuper = () => punyaPeran('SUPERADMIN');
+const isKelola = () => punyaPeran('SUPERADMIN') || punyaPeran('ADMIN');
+const PERAN_PENDEK = { SUPERADMIN: 'Superadmin', ADMIN: 'Admin' };
+/** Label peran lengkap: peran utama + peran tambahan, mis. "Dokter \u2022 Superadmin". */
+const peranLabel = u => PERAN_LABEL[u.peran] + (u.peran_tambahan || []).map(r => ' \u2022 ' + PERAN_PENDEK[r]).join('');
 const isField = () => S.user && ['DOKTER', 'PERAWAT', 'FISIO'].indexOf(S.user.peran) >= 0;
 const staffNama = id => { const s = S.staff.find(x => x.user_id === id); return s ? s.nama : '-'; };
 const pasienById = id => S.pasien.find(p => p.pasien_id === id);
@@ -364,7 +368,7 @@ function gambarShell() {
       <span class="spacer"></span>
       <span class="nx-pill" id="syncPill"></span>
       <button class="nx-btn ghost icon js-theme" data-act="app.tema" aria-label="Ganti tema"><i class="bi ${gelap ? 'bi-sun' : 'bi-moon-stars'}"></i></button>
-      <button class="nx-user" data-act="nav" data-r="profil" aria-label="Profil"><span class="tx"><div class="nm">${u.nama}</div><div class="rl">${PERAN_LABEL[u.peran]}</div></span><span class="nx-ava">${inisial(u.nama)}</span></button>
+      <button class="nx-user" data-act="nav" data-r="profil" aria-label="Profil"><span class="tx"><div class="nm">${u.nama}</div><div class="rl">${peranLabel(u)}</div></span><span class="nx-ava">${inisial(u.nama)}</span></button>
     </header>
     <main class="nx-main" id="view" tabindex="-1"></main>
   </div>
@@ -510,8 +514,8 @@ function berandaAdmin(v) {
 VIEWS.profil = function (v) {
   const u = S.user, tema = document.documentElement.getAttribute('data-theme');
   put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Profil Saya</h1></div></div>
-  <div class="nx-grid2"><div class="nx-card accent"><div class="nx-pt mb16"><div class="nx-ava lg">${inisial(u.nama)}</div><div><div class="t-h3">${u.nama}</div><div class="nx-badge info nodot mt8">${PERAN_LABEL[u.peran]}</div></div></div>
-    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.6</dd></dl>
+  <div class="nx-grid2"><div class="nx-card accent"><div class="nx-pt mb16"><div class="nx-ava lg">${inisial(u.nama)}</div><div><div class="t-h3">${u.nama}</div><div class="nx-badge info nodot mt8">${peranLabel(u)}</div></div></div>
+    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.7</dd></dl>
     <div class="wrap-gap mt24"><button class="nx-btn secondary" data-act="pw.form"><i class="bi bi-key"></i> Ganti Password</button><button class="nx-btn danger" data-act="app.keluar"><i class="bi bi-box-arrow-right"></i> Keluar</button></div></div>
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-pen"></i> Tanda Tangan Saya</div>
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
@@ -1351,23 +1355,34 @@ ACT['m.tab'] = t => { M.tab = t.dataset.v; M.q = ''; gambarMaster(); };
 
 function tabStaf(el) {
   put(el, html`<div class="row-between mb16"><div class="muted t-sm">${M.d.users.length} akun \u2022 password sementara dibuat oleh pemilik, wajib diganti saat login pertama.</div><button class="nx-btn primary" data-act="u.form"><i class="bi bi-person-plus-fill"></i> Tambah Staf</button></div>
-  <div class="nx-card pad0"><div class="nx-list" style="padding:0 16px">${M.d.users.map(u => html`<div class="nx-row" style="margin:0 -16px;padding:12px 16px;${u.status_aktif ? '' : 'opacity:.6'}"><div class="nx-ava ${u.peran === 'SUPERADMIN' ? 'ok' : (u.peran === 'ADMIN' ? 'teal' : '')}">${inisial(u.nama)}</div><div class="grow"><div class="fw7 truncate">${u.nama} ${u.status_aktif ? '' : html`<span class="nx-badge nodot">Nonaktif</span>`}</div><div class="t-sm muted truncate">@${u.username} \u2022 ${PERAN_LABEL[u.peran]}${u.jabatan ? ' \u2022 ' + u.jabatan : ''}${u.terakhir_login ? ' \u2022 login ' + waktuS(u.terakhir_login) : ' \u2022 belum pernah login'}</div></div>
-    <div class="wrap-gap" style="justify-content:flex-end"><button class="nx-btn secondary sm" data-act="u.form" data-id="${u.user_id}"><i class="bi bi-pencil"></i></button>${u.user_id !== S.user.user_id && u.peran !== 'SUPERADMIN' ? html`<button class="nx-btn ghost sm" style="color:var(--err-ink)" data-act="m.hapus" data-j="user" data-id="${u.user_id}" title="Hapus" aria-label="Hapus"><i class="bi bi-trash"></i></button>` : ''}${u.user_id !== S.user.user_id ? html`<button class="nx-btn secondary sm" data-act="u.reset" data-id="${u.user_id}" title="Reset password"><i class="bi bi-key"></i></button><button class="nx-btn ${u.status_aktif ? 'danger' : 'secondary'} sm" data-act="u.toggle" data-id="${u.user_id}">${u.status_aktif ? 'Nonaktifkan' : 'Aktifkan'}</button>` : ''}</div></div>`)}</div></div>`);
+  <div class="nx-card pad0"><div class="nx-list" style="padding:0 16px">${M.d.users.map(u => html`<div class="nx-row" style="margin:0 -16px;padding:12px 16px;${u.status_aktif ? '' : 'opacity:.6'}"><div class="nx-ava ${u.peran === 'SUPERADMIN' ? 'ok' : (u.peran === 'ADMIN' ? 'teal' : '')}">${inisial(u.nama)}</div><div class="grow"><div class="fw7 truncate">${u.nama} ${u.status_aktif ? '' : html`<span class="nx-badge nodot">Nonaktif</span>`}</div><div class="t-sm muted truncate">@${u.username} \u2022 ${peranLabel(u)}${u.jabatan ? ' \u2022 ' + u.jabatan : ''}${u.terakhir_login ? ' \u2022 login ' + waktuS(u.terakhir_login) : ' \u2022 belum pernah login'}</div></div>
+    <div class="wrap-gap" style="justify-content:flex-end"><button class="nx-btn secondary sm" data-act="u.form" data-id="${u.user_id}"><i class="bi bi-pencil"></i></button>${u.user_id !== S.user.user_id && u.peran !== 'SUPERADMIN' && (u.peran_tambahan || []).indexOf('SUPERADMIN') < 0 ? html`<button class="nx-btn ghost sm" style="color:var(--err-ink)" data-act="m.hapus" data-j="user" data-id="${u.user_id}" title="Hapus" aria-label="Hapus"><i class="bi bi-trash"></i></button>` : ''}${u.user_id !== S.user.user_id ? html`<button class="nx-btn secondary sm" data-act="u.reset" data-id="${u.user_id}" title="Reset password"><i class="bi bi-key"></i></button><button class="nx-btn ${u.status_aktif ? 'danger' : 'secondary'} sm" data-act="u.toggle" data-id="${u.user_id}">${u.status_aktif ? 'Nonaktifkan' : 'Aktifkan'}</button>` : ''}</div></div>`)}</div></div>`);
 }
 ACT['u.form'] = t => {
   const u = t.dataset.id ? M.d.users.find(x => x.user_id === t.dataset.id) : null, e = !!u, sup = e && u.peran === 'SUPERADMIN';
   MD.open('mdl', { title: e ? 'Ubah Staf' : 'Tambah Staf', body: html`${medan('uNama', 'Nama lengkap (beserta gelar)', { v: u && u.nama, req: 1, max: 120 })}
     <div class="nx-grid2" style="gap:0 16px">${medan('uUser', 'Username', { v: u && u.username, req: 1, max: 30, ph: 'huruf kecil, angka', help: 'Dipakai untuk login.' })}
     <div class="nx-field"><label class="nx-lab" for="uPeran">Peran <span class="req">*</span></label><select id="uPeran" class="nx-sel" ${sup ? 'disabled' : ''}>${(sup ? ['SUPERADMIN'] : (e ? ['DOKTER', 'PERAWAT', 'FISIO', 'ADMIN'] : ['DOKTER', 'PERAWAT', 'FISIO', 'ADMIN', 'SUPERADMIN'])).map(p => html`<option value="${p}" ${u && u.peran === p ? 'selected' : ''}>${PERAN_LABEL[p]}</option>`)}</select><div class="nx-help" id="uPeranH"></div></div></div>
+    <div class="nx-field" id="uTbBox" style="${sup ? 'display:none' : ''}"><label class="nx-lab">Peran tambahan <span class="muted">(opsional)</span></label>
+      <label class="nx-check"><input type="checkbox" id="uTbA" ${u && (u.peran_tambahan || []).length ? 'checked' : ''}> <span>Admin \u2014 kelola jadwal, pasien, tagihan, konsultasi</span></label>
+      <label class="nx-check"><input type="checkbox" id="uTbS" ${u && (u.peran_tambahan || []).indexOf('SUPERADMIN') >= 0 ? 'checked' : ''}> <span>Superadmin \u2014 akses penuh (keuangan, master data, akun, audit)</span></label>
+      <div class="nx-help" id="uTbH">Contoh: dokter yang juga pemilik klinik. Jabatan, SIP/STR, dan tanda tangan tetap mengikuti peran utama.</div></div>
     <div class="nx-grid2" style="gap:0 16px">${medan('uJab', 'Jabatan', { v: u && u.jabatan, opt: 1, ph: 'mis. Dokter Umum' })}${medan('uSip', 'No. SIP', { v: u && u.no_sip, opt: 1, ph: 'Surat Izin Praktik', help: 'Dicetak di bawah nama pada resume & resep.' })}</div>
     ${medan('uStr', 'No. STR', { v: u && u.no_str, opt: 1 })}
     ${medan('uHp', 'No. HP / WhatsApp', { v: u && u.no_hp, type: 'tel', inputmode: 'tel', opt: 1, help: 'Untuk pengiriman jadwal via WhatsApp.' })}
     ${e ? '' : medan('uPw', 'Password sementara', { opt: 1, ph: 'Kosongkan = dibuat otomatis', help: 'Min. 8 karakter, huruf & angka.' })}`,
-    onShown: () => { const s = $('#uPeran'), h = () => { const x = $('#uPeranH'); if (x) x.textContent = s.value === 'SUPERADMIN' && !sup ? 'Superadmin punya akses penuh (master data, akun, laporan, audit). Peran ini tidak dapat diubah setelah dibuat \u2014 berikan hanya kepada pemilik/pengelola.' : ''; }; s.addEventListener('change', h); h(); },
+    onShown: () => { const tb = () => { const p = $('#uPeran').value, box = $('#uTbBox'), a = $('#uTbA'), sa = $('#uTbS'); if (!box) return; box.style.display = p === 'SUPERADMIN' ? 'none' : ''; a.closest('label').style.display = p === 'ADMIN' ? 'none' : ''; if (sa.checked) { a.checked = true; a.disabled = true; } else a.disabled = false; const h = $('#uTbH'); if (h) h.textContent = sa.checked ? 'Superadmin memberi akses penuh, termasuk keuangan dan akun. Berikan hanya kepada pemilik/pengelola.' : 'Contoh: dokter yang juga pemilik klinik. Jabatan, SIP/STR, dan tanda tangan tetap mengikuti peran utama.'; };
+      ['uPeran', 'uTbA', 'uTbS'].forEach(i => { const el = $('#' + i); if (el) el.addEventListener('change', tb); }); tb();
+      const s = $('#uPeran'), h = () => { const x = $('#uPeranH'); if (x) x.textContent = s.value === 'SUPERADMIN' && !sup ? 'Superadmin punya akses penuh (master data, akun, laporan, audit). Peran ini tidak dapat diubah setelah dibuat \u2014 berikan hanya kepada pemilik/pengelola.' : ''; }; s.addEventListener('change', h); h(); },
     footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="u.simpan" data-id="${e ? u.user_id : ''}">Simpan</button>` });
 };
+function tambahanForm() {
+  const p = $('#uPeran').value; if (p === 'SUPERADMIN') return [];
+  if ($('#uTbS') && $('#uTbS').checked) return ['SUPERADMIN'];
+  return $('#uTbA') && $('#uTbA').checked && p !== 'ADMIN' ? ['ADMIN'] : [];
+}
 ACT['u.simpan'] = async btn => {
-  bersihGalat($('#mdl')); const uname = val('uUser').toLowerCase(), d = { user_id: btn.dataset.id, nama: val('uNama'), username: uname, peran: $('#uPeran').value, jabatan: val('uJab'), no_str: val('uStr'), no_sip: val('uSip'), no_hp: val('uHp'), password: val('uPw') };
+  bersihGalat($('#mdl')); const uname = val('uUser').toLowerCase(), d = { user_id: btn.dataset.id, nama: val('uNama'), username: uname, peran: $('#uPeran').value, peran_tambahan: tambahanForm(), jabatan: val('uJab'), no_str: val('uStr'), no_sip: val('uSip'), no_hp: val('uHp'), password: val('uPw') };
   let ok = true; if (d.nama.length < 3) ok = bad('uNama', 'Nama minimal 3 karakter.'); if (!/^[a-z0-9._-]{3,30}$/.test(uname)) ok = bad('uUser', '3\u201330 karakter: huruf kecil, angka, . _ -'); if (d.password && (d.password.length < 8 || !/[A-Za-z]/.test(d.password) || !/\d/.test(d.password))) ok = bad('uPw', 'Min. 8 karakter, huruf & angka.'); if (!ok) return;
   try {
     const r = await denganSibuk(btn, () => call('user.simpan', d)); const i = M.d.users.findIndex(x => x.user_id === r.user.user_id); if (i >= 0) M.d.users[i] = r.user; else M.d.users.push(r.user);
