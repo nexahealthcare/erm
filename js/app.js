@@ -515,7 +515,7 @@ VIEWS.profil = function (v) {
   const u = S.user, tema = document.documentElement.getAttribute('data-theme');
   put(v, html`<div class="nx-page-h"><div><h1 class="t-h1">Profil Saya</h1></div></div>
   <div class="nx-grid2"><div class="nx-card accent"><div class="nx-pt mb16"><div class="nx-ava lg">${inisial(u.nama)}</div><div><div class="t-h3">${u.nama}</div><div class="nx-badge info nodot mt8">${peranLabel(u)}</div></div></div>
-    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.7</dd></dl>
+    <dl class="nx-kv"><dt>Username</dt><dd>${u.username}</dd>${u.jabatan ? html`<dt>Jabatan</dt><dd>${u.jabatan}</dd>` : ''}${u.no_sip ? html`<dt>No. SIP</dt><dd>${u.no_sip}</dd>` : ''}${u.no_str ? html`<dt>No. STR</dt><dd>${u.no_str}</dd>` : ''}<dt>Klinik</dt><dd>${S.cfg.nama_klinik}</dd><dt>Versi</dt><dd>NexaERM 2.8</dd></dl>
     <div class="wrap-gap mt24"><button class="nx-btn secondary" data-act="pw.form"><i class="bi bi-key"></i> Ganti Password</button><button class="nx-btn danger" data-act="app.keluar"><i class="bi bi-box-arrow-right"></i> Keluar</button></div></div>
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-pen"></i> Tanda Tangan Saya</div>
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
@@ -1212,17 +1212,18 @@ VIEWS.tagihan = async function (v) {
   } catch (e) { galat(e); put('#invBody', kosong('bi-wifi-off', 'Gagal memuat tagihan', e.message)); }
 };
 ACT['inv.buka'] = t => { T.sel = t.dataset.id; go('/tagihan'); };
-function filterInv() { const q = T.q.toLowerCase(); return (T.list || []).filter(i => (!T.f || kelompokInv(i) === T.f) && (!q || (i.nama_pasien + ' ' + i.no_invoice + ' ' + i.no_rm).toLowerCase().indexOf(q) >= 0)); }
+function filterInv() { const q = T.q.toLowerCase(); return (T.list || []).filter(i => (T.f ? kelompokInv(i) === T.f : i.status_terbit !== 'BATAL') && (!q || (i.nama_pasien + ' ' + i.no_invoice + ' ' + i.no_rm).toLowerCase().indexOf(q) >= 0)); }
 function gambarInvList() {
   const b = $('#invBody'); if (!b) return;
   const L = T.list, aktif = L.filter(i => i.status_terbit === 'TERBIT'), tot = aktif.reduce((a, i) => a + i.total, 0), byr = aktif.reduce((a, i) => a + Math.min(i.total, i.jumlah_dibayar), 0), draft = L.filter(i => i.status_terbit === 'DRAFT');
   const cnt = k => L.filter(i => kelompokInv(i) === k).length;
+  const nBatal = cnt('BATAL');
   put(b, html`<div class="nx-kpis"><div class="nx-kpi"><span class="ic"><i class="bi bi-receipt"></i></span><div class="lab">Total terbit</div><div class="val" style="font-size:22px">${rp(tot)}</div><div class="sub">${aktif.length} invoice \u2022 ${T.hari} hari</div></div>
     <div class="nx-kpi"><span class="ic ok"><i class="bi bi-cash-stack"></i></span><div class="lab">Sudah dibayar</div><div class="val" style="font-size:22px">${rp(byr)}</div></div>
     <div class="nx-kpi"><span class="ic bad"><i class="bi bi-wallet2"></i></span><div class="lab">Belum dibayar</div><div class="val" style="font-size:22px">${rp(tot - byr)}</div></div>
     <div class="nx-kpi"><span class="ic warn"><i class="bi bi-hourglass-split"></i></span><div class="lab">Draft</div><div class="val">${draft.length}</div><div class="sub">${rp(draft.reduce((a, i) => a + i.total, 0))}</div></div></div>
   <div class="nx-toolbar"><div class="nx-in-icon"><i class="bi bi-search"></i><input class="nx-in" placeholder="Cari pasien / No. invoice\u2026" value="${T.q}" data-in="inv.q" aria-label="Cari"></div><select class="nx-sel" style="max-width:170px" data-ch="inv.hari" aria-label="Periode">${[[30, '30 hari'], [90, '90 hari'], [180, '180 hari']].map(x => html`<option value="${x[0]}" ${T.hari === x[0] ? 'selected' : ''}>${x[1]}</option>`)}</select></div>
-  <div class="wrap-gap mb16" role="tablist">${FIL.map(x => html`<button class="nx-chip ${T.f === x[0] ? 'on' : ''}" data-act="inv.f" data-v="${x[0]}">${x[1]}${x[0] ? ' ' + cnt(x[0]) : ''}</button>`)}</div>
+  <div class="wrap-gap mb16" role="tablist">${FIL.map(x => html`<button class="nx-chip ${T.f === x[0] ? 'on' : ''}" data-act="inv.f" data-v="${x[0]}">${x[1]}${x[0] ? ' ' + cnt(x[0]) : ''}</button>`)}${T.f === 'BATAL' && isSuper() && nBatal ? html`<button class="nx-btn ghost sm" style="color:var(--err-ink)" data-act="inv.hapusSemua"><i class="bi bi-trash3"></i> Hapus semua yang batal (${nBatal})</button>` : ''}</div>
   <div class="nx-grid-main wide"><div class="nx-card pad0"><div id="invList"></div></div><div class="sticky-side" id="invPrev"></div></div>`);
   isiInv(); if (T.D && T.mode === 'panel') gambarInv();
 }
@@ -1261,6 +1262,7 @@ function gambarInv() {
       ${terbit && i.sisa > 0 ? html`<button class="nx-btn primary grow" data-act="inv.bayar"><i class="bi bi-cash-coin"></i> Catat Pembayaran</button>` : ''}
       ${terbit ? html`<button class="nx-btn wa" data-act="inv.wa"><i class="bi bi-whatsapp"></i> Kirim WA</button>` : ''}
       ${i.status_terbit !== 'BATAL' ? html`<button class="nx-btn secondary" data-act="inv.pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>` : ''}
+      ${i.status_terbit === 'BATAL' && i.jumlah_dibayar === 0 && isSuper() ? html`<button class="nx-btn ghost" style="color:var(--err-ink)" data-act="inv.hapus"><i class="bi bi-trash3"></i> Hapus permanen</button>` : ''}
       ${i.status_terbit !== 'BATAL' && i.jumlah_dibayar === 0 ? html`<button class="nx-btn ghost" style="color:var(--err-ink)" data-act="inv.batal"><i class="bi bi-x-circle"></i> Batalkan</button>` : ''}</div>`;
   if (T.mode === 'panel') put('#invPrev', html`<div class="nx-card accent">${isi}</div>`); else put($('#mdl .modal-body'), isi);
 }
@@ -1283,6 +1285,22 @@ ACT['inv.terbit'] = async btn => {
 ACT['inv.batal'] = async () => {
   const a = await konfirmasi({ title: 'Batalkan invoice', msg: 'Invoice dibatalkan dan tidak dihitung dalam laporan.', ok: 'Batalkan invoice', danger: true, input: { label: 'Alasan pembatalan' } }); if (!a) return;
   try { const r = await call('invoice.batal', { invoice_id: T.D.invoice.invoice_id, alasan: a }); T.D.invoice = Object.assign(T.D.invoice, r); sinkronInv(r); gambarInv(); gambarInvList(); toast('Invoice dibatalkan.', 'warn'); } catch (e) { galat(e); }
+};
+function setelahHapusInv(ids) {
+  T.list = (T.list || []).filter(i => ids.indexOf(i.invoice_id) < 0);
+  if (T.D && ids.indexOf(T.D.invoice.invoice_id) >= 0) { T.D = null; if (T.mode === 'panel') put('#invPrev', ''); else MD.close('mdl'); }
+  gambarInvList();
+}
+ACT['inv.hapus'] = async () => {
+  const i = T.D.invoice;
+  const ok = await konfirmasi({ title: 'Hapus invoice permanen', msg: 'Invoice ' + (i.no_invoice || 'draft') + ' (' + T.D.pasien.nama + ') dihapus selamanya dan tidak dapat dikembalikan. Penghapusan tercatat di Audit Log.', ok: 'Hapus permanen', danger: true }); if (!ok) return;
+  try { const r = await call('invoice.hapus', { invoice_id: i.invoice_id }); setelahHapusInv(r.ids); toast('Invoice dihapus permanen.', 'warn'); } catch (e) { galat(e); }
+};
+ACT['inv.hapusSemua'] = async () => {
+  const ids = (T.list || []).filter(i => i.status_terbit === 'BATAL' && i.jumlah_dibayar === 0).map(i => i.invoice_id).slice(0, 300);
+  if (!ids.length) return;
+  const ok = await konfirmasi({ title: 'Hapus semua invoice batal', msg: ids.length + ' invoice berstatus Batal (periode yang sedang ditampilkan) dihapus selamanya dan tidak dapat dikembalikan. Penghapusan tercatat di Audit Log.', ok: 'Hapus ' + ids.length + ' invoice', danger: true }); if (!ok) return;
+  try { const r = await call('invoice.hapus', { invoice_ids: ids }); setelahHapusInv(r.ids); toast(r.dihapus + ' invoice batal dihapus permanen.', 'warn'); } catch (e) { galat(e); }
 };
 ACT['inv.bayar'] = () => {
   const i = T.D.invoice;
