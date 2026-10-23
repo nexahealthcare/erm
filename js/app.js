@@ -521,10 +521,20 @@ VIEWS.profil = function (v) {
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
       <div class="nx-note mt12"><i class="bi bi-info-circle"></i> Ditempel otomatis pada dokumen yang Anda terbitkan (resume medis, resep). Tersimpan privat; hanya Anda yang dapat mengubahnya.</div>
       <div class="wrap-gap mt16"><button class="nx-btn primary" data-act="ttd.form"><i class="bi bi-pencil"></i> Buat / ganti</button><button class="nx-btn ghost hide" id="ttdDel" data-act="ttd.hapus" style="color:var(--err-ink)"><i class="bi bi-trash"></i> Hapus</button></div></div>
+    ${punyaPeran('DOKTER') ? html`<div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-person-badge"></i> Foto &amp; Profil Dokter</div>
+      <div class="row-gap mb12"><img id="pfFotoImg" class="nx-ava lg hide" alt="Foto Anda" style="object-fit:cover"><div id="pfFotoIni" class="nx-ava lg">${inisial(u.nama)}</div><button type="button" class="nx-btn secondary sm" data-act="pf.foto"><i class="bi bi-camera"></i> Pilih foto</button><button type="button" class="nx-btn ghost sm hide" id="pfFotoDel" data-act="pf.fotoHapus" style="color:var(--err-ink)"><i class="bi bi-trash"></i> Hapus</button></div>
+      ${medan('pfPdd', 'Pendidikan', { v: u.pendidikan, opt: 1, ta: 1, h: 60, max: 500 })}${medan('pfPgl', 'Pengalaman', { v: u.pengalaman, opt: 1, ta: 1, h: 72, max: 800 })}${medan('pfKhl', 'Bidang keahlian / profil singkat', { v: u.keahlian, opt: 1, ta: 1, h: 60, max: 500 })}
+      <div class="nx-note"><i class="bi bi-info-circle"></i> Tampil pada halaman konsultasi online saat pasien mengetuk nama Anda, bersama No. SIP dan STR. Nomor HP tidak ditampilkan.</div>
+      <div class="mt16"><button class="nx-btn primary" data-act="pf.simpan"><i class="bi bi-check2"></i> Simpan Profil</button></div></div>` : ''}
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-palette"></i> Tampilan</div><div class="nx-seg" role="group"><button class="${tema === 'light' ? 'on' : ''}" data-act="tema.set" data-t="light"><i class="bi bi-sun"></i> Terang</button><button class="${tema === 'dark' ? 'on' : ''}" data-act="tema.set" data-t="dark"><i class="bi bi-moon-stars"></i> Gelap</button></div>
     <div class="nx-note mt16"><i class="bi bi-info-circle"></i> Pilihan tema disimpan pada perangkat ini.</div></div></div>`);
-  muatTtdProfil();
+  muatTtdProfil(); muatFotoProfil();
 };
+function tampilFotoProfil(uri) { const im = $('#pfFotoImg'), ini = $('#pfFotoIni'), del = $('#pfFotoDel'); if (!im) return; if (uri) { im.src = uri; im.classList.remove('hide'); ini.classList.add('hide'); del.classList.remove('hide'); } else { im.classList.add('hide'); ini.classList.remove('hide'); del.classList.add('hide'); } }
+function muatFotoProfil() { if (!$('#pfFotoImg')) return; call('foto.lihat', {}).then(r => { if (r.ada) tampilFotoProfil(r.uri); }).catch(() => { }); }
+ACT['pf.foto'] = async () => { try { const uri = await pilihFotoStaf(''); if (!uri) return; S.user.punya_foto = true; tampilFotoProfil(uri); toast('Foto tersimpan.'); } catch (e) { galat(e); } };
+ACT['pf.fotoHapus'] = async () => { try { await call('foto.hapus', {}); S.user.punya_foto = false; tampilFotoProfil(''); toast('Foto dihapus.', 'warn'); } catch (e) { galat(e); } };
+ACT['pf.simpan'] = async btn => { const d = { pendidikan: val('pfPdd'), pengalaman: val('pfPgl'), keahlian: val('pfKhl') }; try { await denganSibuk(btn, () => call('cv.simpan', d)); Object.assign(S.user, d); toast('Profil tersimpan.'); } catch (e) { galat(e); } };
 function muatTtdProfil() {
   call('ttd.lihat').then(r => { const el = $('#ttdPrev'); if (!el) return; put(el, r.ada ? html`<img src="${r.uri}" alt="Tanda tangan Anda" style="max-height:90px;max-width:100%">` : html`<div class="muted t-sm">Belum ada tanda tangan.</div>`); const d = $('#ttdDel'); if (d) d.classList.toggle('hide', !r.ada); }).catch(() => { put('#ttdPrev', html`<div class="muted t-sm">Tidak dapat memuat tanda tangan.</div>`); });
 }
@@ -1388,19 +1398,29 @@ ACT['u.form'] = t => {
     <div class="nx-grid2" style="gap:0 16px">${medan('uJab', 'Jabatan', { v: u && u.jabatan, opt: 1, ph: 'mis. Dokter Umum' })}${medan('uSip', 'No. SIP', { v: u && u.no_sip, opt: 1, ph: 'Surat Izin Praktik', help: 'Dicetak di bawah nama pada resume & resep.' })}</div>
     ${medan('uStr', 'No. STR', { v: u && u.no_str, opt: 1 })}
     ${medan('uHp', 'No. HP / WhatsApp', { v: u && u.no_hp, type: 'tel', inputmode: 'tel', opt: 1, help: 'Untuk pengiriman jadwal via WhatsApp.' })}
+    <div class="nx-field"><label class="nx-lab">Foto &amp; profil dokter <span class="opt">opsional</span></label>
+      ${e ? html`<div class="row-gap"><img id="uFotoImg" class="nx-ava lg hide" alt="Foto" style="object-fit:cover"><div id="uFotoIni" class="nx-ava lg">${inisial(u.nama)}</div><button type="button" class="nx-btn secondary sm" data-act="u.foto" data-id="${u.user_id}"><i class="bi bi-camera"></i> Pilih foto</button><button type="button" class="nx-btn ghost sm hide" id="uFotoDel" data-act="u.fotoHapus" data-id="${u.user_id}" style="color:var(--err-ink)"><i class="bi bi-trash"></i> Hapus</button></div>` : html`<div class="muted t-sm">Foto dapat ditambahkan setelah staf disimpan.</div>`}
+      <div class="nx-help">Foto dan profil tampil di halaman konsultasi online agar pasien yakin berbicara dengan dokternya. Nomor HP tidak ditampilkan.</div></div>
+    ${medan('uPdd', 'Pendidikan', { v: u && u.pendidikan, opt: 1, ta: 1, h: 60, max: 500, ph: 'mis. S1 Kedokteran Universitas ... (2015)' })}
+    ${medan('uPgl', 'Pengalaman', { v: u && u.pengalaman, opt: 1, ta: 1, h: 72, max: 800, ph: 'mis. Dokter IGD RS ... (2016\u20132020)' })}
+    ${medan('uKhl', 'Bidang keahlian / profil singkat', { v: u && u.keahlian, opt: 1, ta: 1, h: 60, max: 500, ph: 'mis. Perawatan luka, lansia, penyakit dalam umum' })}
     ${e ? '' : medan('uPw', 'Password sementara', { opt: 1, ph: 'Kosongkan = dibuat otomatis', help: 'Min. 8 karakter, huruf & angka.' })}`,
     onShown: () => { const tb = () => { const p = $('#uPeran').value, box = $('#uTbBox'), a = $('#uTbA'), sa = $('#uTbS'); if (!box) return; box.style.display = p === 'SUPERADMIN' ? 'none' : ''; a.closest('label').style.display = p === 'ADMIN' ? 'none' : ''; if (sa.checked) { a.checked = true; a.disabled = true; } else a.disabled = false; const h = $('#uTbH'); if (h) h.textContent = sa.checked ? 'Superadmin memberi akses penuh, termasuk keuangan dan akun. Berikan hanya kepada pemilik/pengelola.' : 'Contoh: dokter yang juga pemilik klinik. Jabatan, SIP/STR, dan tanda tangan tetap mengikuti peran utama.'; };
       ['uPeran', 'uTbA', 'uTbS'].forEach(i => { const el = $('#' + i); if (el) el.addEventListener('change', tb); }); tb();
+      if (e) call('foto.lihat', { user_id: u.user_id }).then(r => { if (r.ada) tampilFotoForm(r.uri); }).catch(() => { });
       const s = $('#uPeran'), h = () => { const x = $('#uPeranH'); if (x) x.textContent = s.value === 'SUPERADMIN' && !sup ? 'Superadmin punya akses penuh (master data, akun, laporan, audit). Peran ini tidak dapat diubah setelah dibuat \u2014 berikan hanya kepada pemilik/pengelola.' : ''; }; s.addEventListener('change', h); h(); },
     footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="u.simpan" data-id="${e ? u.user_id : ''}">Simpan</button>` });
 };
+function tampilFotoForm(uri) { const im = $('#uFotoImg'), ini = $('#uFotoIni'), del = $('#uFotoDel'); if (!im) return; if (uri) { im.src = uri; im.classList.remove('hide'); ini.classList.add('hide'); del.classList.remove('hide'); } else { im.classList.add('hide'); ini.classList.remove('hide'); del.classList.add('hide'); } }
+ACT['u.foto'] = async t => { try { const uri = await pilihFotoStaf(t.dataset.id); if (!uri) return; const x = M.d.users.find(k => k.user_id === t.dataset.id); if (x) x.punya_foto = true; tampilFotoForm(uri); toast('Foto tersimpan.'); } catch (e) { galat(e); } };
+ACT['u.fotoHapus'] = async t => { try { await call('foto.hapus', { user_id: t.dataset.id }); const x = M.d.users.find(k => k.user_id === t.dataset.id); if (x) x.punya_foto = false; tampilFotoForm(''); toast('Foto dihapus.', 'warn'); } catch (e) { galat(e); } };
 function tambahanForm() {
   const p = $('#uPeran').value; if (p === 'SUPERADMIN') return [];
   if ($('#uTbS') && $('#uTbS').checked) return ['SUPERADMIN'];
   return $('#uTbA') && $('#uTbA').checked && p !== 'ADMIN' ? ['ADMIN'] : [];
 }
 ACT['u.simpan'] = async btn => {
-  bersihGalat($('#mdl')); const uname = val('uUser').toLowerCase(), d = { user_id: btn.dataset.id, nama: val('uNama'), username: uname, peran: $('#uPeran').value, peran_tambahan: tambahanForm(), jabatan: val('uJab'), no_str: val('uStr'), no_sip: val('uSip'), no_hp: val('uHp'), password: val('uPw') };
+  bersihGalat($('#mdl')); const uname = val('uUser').toLowerCase(), d = { user_id: btn.dataset.id, nama: val('uNama'), username: uname, peran: $('#uPeran').value, peran_tambahan: tambahanForm(), jabatan: val('uJab'), no_str: val('uStr'), no_sip: val('uSip'), no_hp: val('uHp'), password: val('uPw'), pendidikan: val('uPdd'), pengalaman: val('uPgl'), keahlian: val('uKhl') };
   let ok = true; if (d.nama.length < 3) ok = bad('uNama', 'Nama minimal 3 karakter.'); if (!/^[a-z0-9._-]{3,30}$/.test(uname)) ok = bad('uUser', '3\u201330 karakter: huruf kecil, angka, . _ -'); if (d.password && (d.password.length < 8 || !/[A-Za-z]/.test(d.password) || !/\d/.test(d.password))) ok = bad('uPw', 'Min. 8 karakter, huruf & angka.'); if (!ok) return;
   try {
     const r = await denganSibuk(btn, () => call('user.simpan', d)); const i = M.d.users.findIndex(x => x.user_id === r.user.user_id); if (i >= 0) M.d.users[i] = r.user; else M.d.users.push(r.user);
@@ -1458,7 +1478,7 @@ function tabKlinik(el) {
   put(el, html`<div class="nx-grid2"><div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-hospital"></i> Identitas Klinik</div>${medan('cNama', 'Nama klinik', { v: c.nama_klinik, req: 1 })}${medan('cAl', 'Alamat', { v: c.alamat, ta: 1, h: 64 })}<div class="nx-grid2" style="gap:0 16px">${medan('cTel', 'Telepon', { v: c.telepon, type: 'tel' })}${medan('cEm', 'Email', { v: c.email, type: 'email' })}</div>
     <div class="nx-field"><label class="nx-lab">Logo (tampil di aplikasi & kop PDF)</label><div class="row-gap"><img id="logoPrev" src="${c.logo || LOGO_FULL}" alt="Logo" style="height:48px;border-radius:8px;background:#fff;padding:2px"><label class="nx-btn secondary sm" style="margin:0"><i class="bi bi-upload"></i> Unggah<input type="file" accept="image/png,image/jpeg" data-ch="c.logo" class="hide"></label>${c.logo ? html`<button class="nx-btn ghost sm" data-act="c.logoHapus">Pakai bawaan</button>` : ''}</div><div class="nx-help">PNG/JPG, diperkecil otomatis.</div></div></div>
   <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-receipt"></i> Invoice & Jadwal</div><div class="nx-grid2" style="gap:0 16px">${medan('cPre', 'Prefix invoice', { v: c.prefix_invoice, max: 8 })}${medan('cJt', 'Jatuh tempo (hari)', { v: c.jatuh_tempo_hari, inputmode: 'numeric' })}</div>${medan('cBuf', 'Jeda transit antar kunjungan (menit)', { v: c.buffer_transit_menit, inputmode: 'numeric', help: 'Dipakai untuk mendeteksi bentrok jadwal petugas.' })}${medan('cPj', 'Persen jual BHP bawaan (%)', { v: c.persen_jual_bhp, inputmode: 'decimal', help: 'Harga jual BHP = harga beli + persen ini, dibulatkan ke Rp 500. Dapat diganti per BHP.' })}${medan('cRek', 'Informasi pembayaran (rekening / QRIS)', { v: c.rekening, ta: 1, h: 72, help: 'Tercetak pada invoice.' })}</div></div>
-  <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-chat-dots"></i> Konsultasi Online</div>${medan('cKu', 'Alamat halaman konsultasi (Blogger)', { v: c.konsultasi_url, ph: 'https://klinikanda.blogspot.com/p/k.html', help: 'Tautan pasien = alamat ini + ?k=KODE. Gunakan alamat halaman pendek agar tautan singkat. Kosongkan untuk memakai alamat Apps Script.' })}${medan('cKj', 'Masa berlaku tautan (jam)', { v: c.konsultasi_jam, inputmode: 'numeric', help: 'Tautan juga langsung kedaluwarsa saat dokter menyelesaikan percakapan.' })}${medan('cWk', 'Templat pesan WhatsApp konsultasi', { v: c.wa_template_konsultasi, ta: 1, h: 90, help: 'Variabel: {nama} {dokter} {link} {berlaku} {klinik}' })}</div>
+  <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-chat-dots"></i> Konsultasi Online</div>${medan('cKu', 'Alamat halaman konsultasi (Blogger)', { v: c.konsultasi_url, ph: 'https://klinikanda.blogspot.com/p/k.html', help: 'Tautan pasien = alamat ini + ?k=KODE. Gunakan alamat halaman pendek agar tautan singkat. Kosongkan untuk memakai alamat Apps Script.' })}${medan('cKj', 'Masa berlaku tautan (jam)', { v: c.konsultasi_jam, inputmode: 'numeric', help: 'Tautan juga langsung kedaluwarsa saat dokter menyelesaikan percakapan.' })}${medan('cSap', 'Sapaan otomatis konsultasi', { v: c.konsultasi_sapaan, ta: 1, h: 100, max: 600, help: 'Terkirim satu kali, otomatis atas nama dokter, saat pasien pertama membuka percakapan. Variabel: {nama} {dokter} {klinik}. Kosongkan bila tidak ingin ada sapaan. Pasien melihat label "Pesan otomatis" di bawahnya.' })}${medan('cWk', 'Templat pesan WhatsApp konsultasi', { v: c.wa_template_konsultasi, ta: 1, h: 90, help: 'Variabel: {nama} {dokter} {link} {berlaku} {klinik}' })}</div>
   <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-whatsapp"></i> Templat Pesan WhatsApp</div>${medan('cWi', 'Templat invoice', { v: c.wa_template_invoice, ta: 1, h: 72, help: 'Variabel: {nama} {no} {total} {jatuh_tempo} {klinik} {link}' })}${medan('cWr', 'Templat resume medis', { v: c.wa_template_resume, ta: 1, h: 72, help: 'Variabel: {nama} {tanggal} {klinik} {link}' })}</div>
   <div class="mt16"><button class="nx-btn primary" data-act="c.simpan"><i class="bi bi-check2"></i> Simpan Pengaturan</button></div>`);
 }
@@ -1471,7 +1491,7 @@ INP['c.logo'] = el => {
 };
 ACT['c.logoHapus'] = async () => { try { const r = await call('config.simpan', { hapus_logo: true }); M.d.config = r; S.cfg = r; gambarShell(); render(true); toast('Logo bawaan dipakai.'); } catch (e) { galat(e); } };
 ACT['c.simpan'] = async btn => {
-  bersihGalat($('#mTab')); const d = { nama_klinik: val('cNama'), alamat: val('cAl'), telepon: val('cTel'), email: val('cEm'), prefix_invoice: val('cPre'), jatuh_tempo_hari: val('cJt'), buffer_transit_menit: val('cBuf'), persen_jual_bhp: val('cPj'), rekening: val('cRek'), wa_template_invoice: val('cWi'), wa_template_resume: val('cWr'), konsultasi_url: val('cKu'), konsultasi_jam: val('cKj'), wa_template_konsultasi: val('cWk') };
+  bersihGalat($('#mTab')); const d = { nama_klinik: val('cNama'), alamat: val('cAl'), telepon: val('cTel'), email: val('cEm'), prefix_invoice: val('cPre'), jatuh_tempo_hari: val('cJt'), buffer_transit_menit: val('cBuf'), persen_jual_bhp: val('cPj'), rekening: val('cRek'), wa_template_invoice: val('cWi'), wa_template_resume: val('cWr'), konsultasi_url: val('cKu'), konsultasi_jam: val('cKj'), wa_template_konsultasi: val('cWk'), konsultasi_sapaan: val('cSap') };
   if (d.nama_klinik.length < 3) return bad('cNama', 'Nama klinik wajib diisi.'); if (d.persen_jual_bhp === '' || !(num(d.persen_jual_bhp) >= 0 && num(d.persen_jual_bhp) <= 1000)) return bad('cPj', 'Isi persen 0\u20131000.'); if (!/^[A-Za-z0-9]{2,8}$/.test(d.prefix_invoice)) return bad('cPre', '2\u20138 huruf/angka.');
   if (d.konsultasi_url && !/^https:\/\/[^\s?#]+$/.test(d.konsultasi_url)) return bad('cKu', 'Harus diawali https:// dan tanpa ? atau #.');
   if (M.logo) d.logo_data = M.logo;
@@ -1584,6 +1604,45 @@ function kecilkanFoto(file) {
   });
 }
 
+/** Foto profil: potong persegi dari tengah, 360px, JPEG (\u00b130\u201360 KB). */
+function kecilkanFotoProfil(file) {
+  return new Promise((res, rej) => {
+    if (!file || !/^image\//.test(file.type)) return rej(new Error('Pilih berkas gambar (JPG/PNG).'));
+    if (file.size > 25e6) return rej(new Error('Foto terlalu besar.'));
+    const r = new FileReader();
+    r.onerror = () => rej(new Error('Foto tidak dapat dibaca.'));
+    r.onload = () => {
+      const im = new Image();
+      im.onerror = () => rej(new Error('Format foto tidak didukung. Gunakan JPG/PNG.'));
+      im.onload = () => {
+        const sisi = Math.min(im.width, im.height), sx = (im.width - sisi) / 2, sy = (im.height - sisi) / 2, T = 360;
+        const c = document.createElement('canvas'); c.width = T; c.height = T; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, T, T); x.drawImage(im, sx, sy, sisi, sisi, 0, 0, T, T);
+        let u = c.toDataURL('image/jpeg', .82); if (u.length > 300000) u = c.toDataURL('image/jpeg', .65); if (u.length > 400000) return rej(new Error('Foto terlalu besar setelah dikompres.')); res(u);
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+/** Pilih foto lalu simpan ke petugas (userId kosong = diri sendiri). Mengembalikan data URI. */
+function pilihFotoStaf(userId) {
+  return new Promise((res, rej) => {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = async () => { const f = inp.files[0]; if (!f) return res(null); try { const uri = await kecilkanFotoProfil(f); await call('foto.simpan', { user_id: userId || '', data: uri }); res(uri); } catch (e) { rej(e); } };
+    inp.click();
+  });
+}
+/** Kartu profil dokter (dilihat pasien): foto, jabatan, SIP/STR, pendidikan, pengalaman, keahlian. */
+function kartuProfilDokter(d, klinik) {
+  d = d || {}; const baris = (ikon, j, v) => v ? html`<div class="kc-pf-row"><div class="kc-pf-ic"><i class="bi bi-${ikon}"></i></div><div><div class="t-cap">${j}</div><div class="kc-pf-tx">${v}</div></div></div>` : '';
+  MD.open('mdl', { title: 'Profil Dokter', size: 'sm', body: html`<div class="kc-pf">
+    ${d.foto ? html`<img class="kc-pf-foto" src="${d.foto}" alt="Foto ${d.nama}">` : html`<div class="kc-pf-foto ph">${inisial(d.nama)}</div>`}
+    <div class="t-h3 mt12">${d.nama}</div>${d.jabatan ? html`<div class="muted">${d.jabatan}</div>` : ''}
+    ${klinik && klinik.nama ? html`<div class="nx-badge info nodot mt8">${klinik.nama}</div>` : ''}</div>
+    <div class="kc-pf-list">${baris('patch-check', 'No. SIP', d.no_sip)}${baris('shield-check', 'No. STR', d.no_str)}${baris('mortarboard', 'Pendidikan', d.pendidikan)}${baris('briefcase', 'Pengalaman', d.pengalaman)}${baris('heart-pulse', 'Bidang keahlian', d.keahlian)}</div>`,
+    footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Tutup</button>` });
+}
+
 /** Penjadwal polling: cepat saat aktif, melambat saat sepi, berhenti saat tab tersembunyi. */
 function buatPoller(fn) {
   let t = null, jalan = true, terakhir = Date.now(), sibukN = false;
@@ -1615,13 +1674,14 @@ function buatChat(root, o) {
     o.fotoFn(id).then(d => { const url = URL.createObjectURL(b64ToBlob(d.base64, d.mime)); st.foto[id] = url; img.src = url; img.classList.remove('nx-skel', 'kc-pic-ph'); img.classList.add('kc-pic'); }).catch(() => { img.replaceWith(Object.assign(document.createElement('div'), { className: 'muted t-sm', textContent: '(foto tidak dapat dimuat)' })); });
   }
   function node(m, tmp) {
-    const d = document.createElement('div'), mine = m.dari === o.me;
+    const d = document.createElement('div'), mine = m.dari === o.me || (m.dari === 'OTOMATIS' && o.me === 'DOKTER');
     d.className = 'kc-b ' + (m.dari === 'SISTEM' ? 'sys' : (mine ? 'me' : 'them')) + (tmp ? ' tmp' : ''); d.dataset.id = m.pesan_id;
     let h = '';
     if (m.foto) h += '<img class="nx-skel kc-pic-ph" alt="Foto kiriman" data-kc="zoom">';
     if (m.resep) h += '<div class="kc-rx"><i class="bi bi-file-earmark-medical"></i><div class="grow"><b>Resep obat</b><div class="t-xs">' + E(m.teks || '') + '</div></div><button type="button" class="nx-btn sm ' + (mine ? 'secondary' : 'primary') + '" data-kc="resep" data-rid="' + E(m.resep) + '"><i class="bi bi-download"></i> PDF</button></div>';
     else if (m.surat) h += '<div class="kc-rx"><i class="bi bi-file-earmark-medical"></i><div class="grow"><b>Surat keterangan sakit</b><div class="t-xs">' + E(m.teks || '') + '</div></div><button type="button" class="nx-btn sm ' + (mine ? 'secondary' : 'primary') + '" data-kc="surat" data-rid="' + E(m.surat) + '"><i class="bi bi-download"></i> PDF</button></div>';
     else if (m.teks) h += '<div class="tx">' + E(m.teks) + '</div>';
+    if (m.dari === 'OTOMATIS' && o.labelOto) h += '<div class="oto">' + E(o.labelOto) + '</div>';
     if (m.dari !== 'SISTEM') h += '<div class="tm">' + (tmp ? 'mengirim\u2026' : E(JAM(m.waktu))) + '</div>';
     d.innerHTML = h;
     const img = $('img', d); if (img) { if (m._local) { st.foto[m.pesan_id] = m._local; } muatFoto(img, m.pesan_id); }
@@ -1633,7 +1693,7 @@ function buatChat(root, o) {
       (list || []).forEach(m => {
         if (st.seen[m.pesan_id]) return; st.seen[m.pesan_id] = 1; st.maxSeq = Math.max(st.maxSeq, m.seq || 0);
         if (m.dari === o.me) { const tmpEl = $('.kc-b.tmp', box); if (tmpEl && tmpEl.dataset.pending) { if (m.foto && tmpEl.dataset.local) st.foto[m.pesan_id] = tmpEl.dataset.local; tmpEl.remove(); } }
-        box.appendChild(node(m)); if (m.dari !== o.me && m.dari !== 'SISTEM') baru++;
+        box.appendChild(node(m)); if (m.dari !== o.me && m.dari !== 'SISTEM' && m.dari !== 'OTOMATIS') baru++;
       });
       if (stick || (list && list.length && !st.maxSeq)) bawah();
       return baru;
@@ -1680,7 +1740,7 @@ function halamanPasien(kode) {
   document.body.classList.add('pasien-mode');
   $('#boot').classList.add('hide'); $('#appView').classList.add('hide');
   const v = $('#loginView'); v.classList.remove('hide');
-  const P_ = { kode: kode, dob: '', sk: '', ver: '', chat: null, poller: null, dokter: '', klinik: S.cfg };
+  const P_ = { kode: kode, dob: '', sk: '', ver: '', chat: null, poller: null, dokter: '', profil: null, klinik: S.cfg };
   const logo = () => (P_.klinik && P_.klinik.logo) || LOGO_FULL;
   function gate(pesan) {
     if (P_.poller) { P_.poller.stop(); P_.poller = null; }
@@ -1698,7 +1758,7 @@ function halamanPasien(kode) {
       P_.klinik = Object.assign({}, P_.klinik, r.klinik || {});
       if (r.klinik && r.klinik.nama) { S.cfg = { nama_klinik: r.klinik.nama, logo: r.klinik.logo }; }
       if (!r.sk) return selesai(r.status, r.dokter_nama);
-      P_.sk = r.sk; P_.dokter = r.dokter_nama; P_.ver = r.ver; if (diam) return r;
+      P_.sk = r.sk; P_.dokter = r.dokter_nama; P_.profil = r.dokter || null; P_.ver = r.ver; if (diam) return r;
       tampilChat(r); return r;
     } catch (e) { if (diam) throw e; gate(e.message); }
   }
@@ -1709,11 +1769,12 @@ function halamanPasien(kode) {
       <div class="kc-gate" style="text-align:center"><div class="ill" style="width:72px;height:72px;margin:0 auto 16px;border-radius:50%;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center;font-size:34px"><i class="bi bi-${exp ? 'hourglass-bottom' : 'check-lg'}"></i></div><div class="t-h2 mb8">${exp ? 'Tautan sudah kedaluwarsa' : 'Konsultasi telah selesai'}</div><p class="muted">${exp ? 'Masa berlaku tautan ini telah berakhir.' : (dokter ? dokter + ' telah menyelesaikan konsultasi ini.' : 'Dokter telah menyelesaikan konsultasi ini.')} Tautan ini tidak berlaku lagi. Bila Anda memerlukan konsultasi lanjutan, hubungi klinik untuk mendapatkan tautan baru.</p></div></div></div>`);
   }
   function tampilChat(r) {
-    put(v, html`<div class="kc-page"><div class="kc-shell"><div class="kc-top"><img src="${logo()}" alt=""><div class="grow"><div class="nm truncate">${P_.dokter}</div><div class="st"><span class="kc-dot" id="kcDot"></span><span id="kcSt">Konsultasi berlangsung</span></div></div></div>
+    put(v, html`<div class="kc-page"><div class="kc-shell"><div class="kc-top"><button class="kc-doc" type="button" data-kc-profil="1" aria-label="Lihat profil ${P_.dokter}">${P_.profil && P_.profil.foto ? html`<img class="kc-av" src="${P_.profil.foto}" alt="Foto ${P_.dokter}">` : html`<span class="kc-av ph">${inisial(P_.dokter)}</span>`}</button><div class="grow" style="min-width:0"><button class="nm kc-nmbtn truncate" type="button" data-kc-profil="1">${P_.dokter} <i class="bi bi-chevron-right"></i></button><div class="st"><span class="kc-dot" id="kcDot"></span><span id="kcSt">Konsultasi berlangsung</span></div></div><img class="kc-logo" src="${logo()}" alt=""></div>
       <div class="kc-info"><i class="bi bi-exclamation-triangle-fill"></i><div>Bukan untuk keadaan darurat. Bila gawat (sesak berat, nyeri dada hebat, pingsan), segera ke IGD / hubungi 119.</div></div><div id="kcBox" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></div></div>`);
     const root = $('#kcBox'); root.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0';
+    v.querySelectorAll('[data-kc-profil]').forEach(b => b.addEventListener('click', () => kartuProfilDokter(P_.profil || { nama: P_.dokter }, P_.klinik)));
     P_.chat = buatChat(root, {
-      me: 'PASIEN', aktif: true,
+      me: 'PASIEN', aktif: true, labelOto: 'Pesan otomatis. Balasan berikutnya akan ditulis langsung oleh ' + P_.dokter + '.',
       fotoFn: id => withSesi(() => call('kp.foto', { sk: P_.sk, pesan_id: id })),
       resepFn: id => withSesi(() => call('kp.resep', { sk: P_.sk, resep_id: id })),
       suratFn: id => withSesi(() => call('kp.surat', { sk: P_.sk, surat_id: id })),
@@ -1829,7 +1890,7 @@ async function chatStaf(v, id) {
     <div class="nx-card pad-sm mb12"><div class="row-between"><div><div class="fw7">${k.pasien_nama} <span class="muted t-sm">${k.no_rm}</span></div>${k.keluhan ? html`<div class="t-sm muted">${k.keluhan}</div>` : ''}</div><span id="koBadge">${badgeK(k.status)}</span></div></div>
     <div class="kc-staff" id="koChat"></div>`);
   const aktif = k.status === 'MENUNGGU' || k.status === 'BERLANGSUNG';
-  const chat = buatChat($('#koChat'), { me: 'DOKTER', aktif: aktif && mine, fotoFn: pid => call('kons.foto', { kons_id: id, pesan_id: pid }), resepFn: rid => call('resep.pdf', { resep_id: rid }), suratFn: sid => call('surat.pdf', { surat_id: sid }), kirimFn: pl => call('kons.kirim', { kons_id: id, teks: pl.teks, foto: pl.foto || '' }), onKirim: () => KS.poller && KS.poller.ping(), onKetik: () => KS.poller && KS.poller.aktif() });
+  const chat = buatChat($('#koChat'), { me: 'DOKTER', labelOto: 'Sapaan otomatis (pesan dari sistem).', aktif: aktif && mine, fotoFn: pid => call('kons.foto', { kons_id: id, pesan_id: pid }), resepFn: rid => call('resep.pdf', { resep_id: rid }), suratFn: sid => call('surat.pdf', { surat_id: sid }), kirimFn: pl => call('kons.kirim', { kons_id: id, teks: pl.teks, foto: pl.foto || '' }), onKirim: () => KS.poller && KS.poller.ping(), onKetik: () => KS.poller && KS.poller.aktif() });
   chat.masuk(d.pesan);
   const akhir = st => { chat.akhiri(st === 'SELESAI' ? 'Konsultasi telah diselesaikan. Tautan pasien sudah kedaluwarsa.' : (st === 'KEDALUWARSA' ? 'Masa berlaku tautan berakhir.' : 'Mode lihat saja.')); put('#koBadge', badgeK(st)); const rx = $('#koRx'); if (rx) rx.remove(); const sr = $('#koSr'); if (sr) sr.remove(); const b = $('#koSel'); if (b) b.remove(); };
   if (!aktif) akhir(k.status); else if (!mine) chat.akhiri('Mode lihat saja \u2014 hanya dokter yang bertugas yang dapat membalas.');
