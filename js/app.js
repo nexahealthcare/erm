@@ -521,6 +521,7 @@ VIEWS.profil = function (v) {
       <div class="nx-ttd-prev" id="ttdPrev">${skel(1, 70)}</div>
       <div class="nx-note mt12"><i class="bi bi-info-circle"></i> Ditempel otomatis pada dokumen yang Anda terbitkan (resume medis, resep). Tersimpan privat; hanya Anda yang dapat mengubahnya.</div>
       <div class="wrap-gap mt16"><button class="nx-btn primary" data-act="ttd.form"><i class="bi bi-pencil"></i> Buat / ganti</button><button class="nx-btn ghost hide" id="ttdDel" data-act="ttd.hapus" style="color:var(--err-ink)"><i class="bi bi-trash"></i> Hapus</button></div></div>
+    ${punyaPeran('DOKTER') ? html`<div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-telegram"></i> Notifikasi Telegram</div><div id="tgBox">${skel(1, 60)}</div></div>` : ''}
     ${punyaPeran('DOKTER') ? html`<div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-person-badge"></i> Foto &amp; Profil Dokter</div>
       <div class="row-gap mb12"><img id="pfFotoImg" class="nx-ava lg hide" alt="Foto Anda" style="object-fit:cover"><div id="pfFotoIni" class="nx-ava lg">${inisial(u.nama)}</div><button type="button" class="nx-btn secondary sm" data-act="pf.foto"><i class="bi bi-camera"></i> Pilih foto</button><button type="button" class="nx-btn ghost sm hide" id="pfFotoDel" data-act="pf.fotoHapus" style="color:var(--err-ink)"><i class="bi bi-trash"></i> Hapus</button></div>
       ${medan('pfPdd', 'Pendidikan', { v: u.pendidikan, opt: 1, ta: 1, h: 60, max: 500 })}${medan('pfPgl', 'Pengalaman', { v: u.pengalaman, opt: 1, ta: 1, h: 72, max: 800 })}${medan('pfKhl', 'Bidang keahlian / profil singkat', { v: u.keahlian, opt: 1, ta: 1, h: 60, max: 500 })}
@@ -528,8 +529,24 @@ VIEWS.profil = function (v) {
       <div class="mt16"><button class="nx-btn primary" data-act="pf.simpan"><i class="bi bi-check2"></i> Simpan Profil</button></div></div>` : ''}
     <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-palette"></i> Tampilan</div><div class="nx-seg" role="group"><button class="${tema === 'light' ? 'on' : ''}" data-act="tema.set" data-t="light"><i class="bi bi-sun"></i> Terang</button><button class="${tema === 'dark' ? 'on' : ''}" data-act="tema.set" data-t="dark"><i class="bi bi-moon-stars"></i> Gelap</button></div>
     <div class="nx-note mt16"><i class="bi bi-info-circle"></i> Pilihan tema disimpan pada perangkat ini.</div></div></div>`);
-  muatTtdProfil(); muatFotoProfil();
+  muatTtdProfil(); muatFotoProfil(); muatTg();
 };
+// \u2500\u2500 Notifikasi Telegram (dokter) \u2500\u2500
+async function muatTg(tautan) {
+  const el = $('#tgBox'); if (!el) return;
+  let st; try { st = await call('tg.status', {}); } catch (e) { return put(el, html`<div class="muted t-sm">Tidak dapat memuat status Telegram.</div>`); }
+  if (!st.bot_aktif) return put(el, html`<div class="nx-note"><i class="bi bi-info-circle"></i> Bot Telegram belum diaktifkan. Minta Owner mengaktifkannya di <b>Master Data \u2192 Klinik \u2192 Notifikasi Telegram</b>.</div>`);
+  if (st.terhubung) return put(el, html`<div class="nx-alert ok mb12"><i class="bi bi-check-circle-fill"></i><div>Terhubung. Anda akan menerima pemberitahuan di Telegram saat pasien membalas konsultasi online. Isi chat tidak dikirim.</div></div>
+    <div class="wrap-gap"><button class="nx-btn secondary" data-act="tg.tes"><i class="bi bi-bell"></i> Kirim tes</button><button class="nx-btn ghost" data-act="tg.putus" style="color:var(--err-ink)"><i class="bi bi-x-circle"></i> Putuskan</button></div>`);
+  put(el, html`<p class="t-sm muted mb12">Dapatkan pemberitahuan di HP (seperti pesan Telegram biasa) saat pasien membalas konsultasi Anda, walau aplikasi tertutup. Isi chat tidak dikirim, hanya inisial pasien.</p>
+    ${tautan ? html`<div class="nx-alert info mb12"><i class="bi bi-telegram"></i><div>1. Ketuk <b>Buka Telegram</b> lalu tekan <b>Start</b>.<br>2. Kembali ke sini dan ketuk <b>Sudah, cek</b>. <span class="muted">(Berlaku ${tautan.berlaku_menit} menit)</span></div></div>
+      <div class="wrap-gap"><a class="nx-btn primary" href="${tautan.url}" target="_blank" rel="noopener"><i class="bi bi-telegram"></i> Buka Telegram</a><button class="nx-btn secondary" data-act="tg.cek"><i class="bi bi-arrow-repeat"></i> Sudah, cek</button></div>`
+      : html`<button class="nx-btn primary" data-act="tg.hubung"><i class="bi bi-telegram"></i> Hubungkan Telegram</button>`}`);
+}
+ACT['tg.hubung'] = async t => { try { const r = await denganSibuk(t, () => call('tg.tautan', {})); muatTg(r); } catch (e) { galat(e); } };
+ACT['tg.cek'] = async t => { try { const r = await denganSibuk(t, () => call('tg.cek', {})); if (r.terhubung) { toast('Telegram terhubung.'); muatTg(); } else toast('Belum terdeteksi. Pastikan sudah menekan Start di Telegram, lalu coba lagi.', 'warn'); } catch (e) { galat(e); } };
+ACT['tg.tes'] = async t => { try { await denganSibuk(t, () => call('tg.tes', {})); toast('Pesan tes dikirim. Periksa Telegram Anda.'); } catch (e) { galat(e); } };
+ACT['tg.putus'] = async () => { if (!await konfirmasi({ title: 'Putuskan Telegram', msg: 'Anda tidak akan menerima pemberitahuan konsultasi di Telegram lagi.', ok: 'Putuskan', danger: true })) return; try { await call('tg.putus', {}); toast('Telegram diputus.', 'warn'); muatTg(); } catch (e) { galat(e); } };
 function tampilFotoProfil(uri) { const im = $('#pfFotoImg'), ini = $('#pfFotoIni'), del = $('#pfFotoDel'); if (!im) return; if (uri) { im.src = uri; im.classList.remove('hide'); ini.classList.add('hide'); del.classList.remove('hide'); } else { im.classList.add('hide'); ini.classList.remove('hide'); del.classList.add('hide'); } }
 function muatFotoProfil() { if (!$('#pfFotoImg')) return; call('foto.lihat', {}).then(r => { if (r.ada) tampilFotoProfil(r.uri); }).catch(() => { }); }
 ACT['pf.foto'] = async () => { try { const uri = await pilihFotoStaf(''); if (!uri) return; S.user.punya_foto = true; tampilFotoProfil(uri); toast('Foto tersimpan.'); } catch (e) { galat(e); } };
@@ -1411,6 +1428,14 @@ ACT['u.form'] = t => {
       const s = $('#uPeran'), h = () => { const x = $('#uPeranH'); if (x) x.textContent = s.value === 'SUPERADMIN' && !sup ? 'Superadmin punya akses penuh (master data, akun, laporan, audit). Peran ini tidak dapat diubah setelah dibuat \u2014 berikan hanya kepada pemilik/pengelola.' : ''; }; s.addEventListener('change', h); h(); },
     footer: html`<button class="nx-btn secondary" data-bs-dismiss="modal">Batal</button><button class="nx-btn primary" data-act="u.simpan" data-id="${e ? u.user_id : ''}">Simpan</button>` });
 };
+ACT['tg.botSimpan'] = async btn => {
+  const token = val('tgTok').trim(); if (!token) return bad('tgTok', 'Tempel token dari @BotFather.');
+  try { const r = await denganSibuk(btn, () => call('tg.bot', { token: token })); M.d.config.telegram_bot_aktif = r.bot_aktif; M.d.config.telegram_bot_username = r.bot_username; toast('Bot @' + r.bot_username + ' aktif.'); tabKlinik($('#mTab')); } catch (e) { galat(e); }
+};
+ACT['tg.botOff'] = async () => {
+  if (!await konfirmasi({ title: 'Nonaktifkan bot Telegram', msg: 'Dokter tidak akan menerima notifikasi Telegram sampai bot dipasang kembali. Penautan dokter tetap tersimpan.', ok: 'Nonaktifkan', danger: true })) return;
+  try { await call('tg.bot', { token: '' }); M.d.config.telegram_bot_aktif = false; M.d.config.telegram_bot_username = ''; toast('Bot dinonaktifkan.', 'warn'); tabKlinik($('#mTab')); } catch (e) { galat(e); }
+};
 function tampilFotoForm(uri) { const im = $('#uFotoImg'), ini = $('#uFotoIni'), del = $('#uFotoDel'); if (!im) return; if (uri) { im.src = uri; im.classList.remove('hide'); ini.classList.add('hide'); del.classList.remove('hide'); } else { im.classList.add('hide'); ini.classList.remove('hide'); del.classList.add('hide'); } }
 ACT['u.foto'] = async t => { try { const uri = await pilihFotoStaf(t.dataset.id); if (!uri) return; const x = M.d.users.find(k => k.user_id === t.dataset.id); if (x) x.punya_foto = true; tampilFotoForm(uri); toast('Foto tersimpan.'); } catch (e) { galat(e); } };
 ACT['u.fotoHapus'] = async t => { try { await call('foto.hapus', { user_id: t.dataset.id }); const x = M.d.users.find(k => k.user_id === t.dataset.id); if (x) x.punya_foto = false; tampilFotoForm(''); toast('Foto dihapus.', 'warn'); } catch (e) { galat(e); } };
@@ -1479,6 +1504,11 @@ function tabKlinik(el) {
     <div class="nx-field"><label class="nx-lab">Logo (tampil di aplikasi & kop PDF)</label><div class="row-gap"><img id="logoPrev" src="${c.logo || LOGO_FULL}" alt="Logo" style="height:48px;border-radius:8px;background:#fff;padding:2px"><label class="nx-btn secondary sm" style="margin:0"><i class="bi bi-upload"></i> Unggah<input type="file" accept="image/png,image/jpeg" data-ch="c.logo" class="hide"></label>${c.logo ? html`<button class="nx-btn ghost sm" data-act="c.logoHapus">Pakai bawaan</button>` : ''}</div><div class="nx-help">PNG/JPG, diperkecil otomatis.</div></div></div>
   <div class="nx-card"><div class="nx-sec-title mb16"><i class="bi bi-receipt"></i> Invoice & Jadwal</div><div class="nx-grid2" style="gap:0 16px">${medan('cPre', 'Prefix invoice', { v: c.prefix_invoice, max: 8 })}${medan('cJt', 'Jatuh tempo (hari)', { v: c.jatuh_tempo_hari, inputmode: 'numeric' })}</div>${medan('cBuf', 'Jeda transit antar kunjungan (menit)', { v: c.buffer_transit_menit, inputmode: 'numeric', help: 'Dipakai untuk mendeteksi bentrok jadwal petugas.' })}${medan('cPj', 'Persen jual BHP bawaan (%)', { v: c.persen_jual_bhp, inputmode: 'decimal', help: 'Harga jual BHP = harga beli + persen ini, dibulatkan ke Rp 500. Dapat diganti per BHP.' })}${medan('cRek', 'Informasi pembayaran (rekening / QRIS)', { v: c.rekening, ta: 1, h: 72, help: 'Tercetak pada invoice.' })}</div></div>
   <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-chat-dots"></i> Konsultasi Online</div>${medan('cKu', 'Alamat halaman konsultasi (Blogger)', { v: c.konsultasi_url, ph: 'https://klinikanda.blogspot.com/p/k.html', help: 'Tautan pasien = alamat ini + ?k=KODE. Gunakan alamat halaman pendek agar tautan singkat. Kosongkan untuk memakai alamat Apps Script.' })}${medan('cKj', 'Masa berlaku tautan (jam)', { v: c.konsultasi_jam, inputmode: 'numeric', help: 'Tautan juga langsung kedaluwarsa saat dokter menyelesaikan percakapan.' })}${medan('cSap', 'Sapaan otomatis konsultasi', { v: c.konsultasi_sapaan, ta: 1, h: 100, max: 600, help: 'Terkirim satu kali, otomatis atas nama dokter, saat pasien pertama membuka percakapan. Variabel: {nama} {dokter} {klinik}. Kosongkan bila tidak ingin ada sapaan. Pasien melihat label "Pesan otomatis" di bawahnya.' })}${medan('cWk', 'Templat pesan WhatsApp konsultasi', { v: c.wa_template_konsultasi, ta: 1, h: 90, help: 'Variabel: {nama} {dokter} {link} {berlaku} {klinik}' })}</div>
+  <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-telegram"></i> Notifikasi Telegram (Konsultasi)</div>
+    ${c.telegram_bot_aktif ? html`<div class="nx-alert ok mb12"><i class="bi bi-check-circle-fill"></i><div>Bot aktif: <b>@${c.telegram_bot_username}</b>. Minta tiap dokter membuka <b>Profil \u2192 Notifikasi Telegram \u2192 Hubungkan</b>.</div></div>`
+      : html`<div class="nx-note mb12"><i class="bi bi-info-circle"></i><div>Dokter menerima pemberitahuan di HP saat pasien membalas konsultasi (hanya inisial pasien, tanpa isi chat).<br>1. Di Telegram, buka <b>@BotFather</b> \u2192 ketik <b>/newbot</b> \u2192 ikuti langkahnya \u2192 salin <b>token</b>.<br>2. Tempel token di bawah \u2192 <b>Simpan &amp; uji</b>.<br>3. Minta tiap dokter menghubungkan di menu Profil.</div></div>`}
+    ${medan('tgTok', c.telegram_bot_aktif ? 'Ganti token bot' : 'Token bot', { type: 'password', opt: 1, ph: '123456789:AAH\u2026', help: 'Token tersimpan hanya di server dan tidak pernah ditampilkan lagi.' })}
+    <div class="wrap-gap"><button class="nx-btn primary" data-act="tg.botSimpan"><i class="bi bi-check2"></i> Simpan &amp; uji</button>${c.telegram_bot_aktif ? html`<button class="nx-btn ghost" data-act="tg.botOff" style="color:var(--err-ink)"><i class="bi bi-x-circle"></i> Nonaktifkan</button>` : ''}</div></div>
   <div class="nx-card mt16"><div class="nx-sec-title mb16"><i class="bi bi-whatsapp"></i> Templat Pesan WhatsApp</div>${medan('cWi', 'Templat invoice', { v: c.wa_template_invoice, ta: 1, h: 72, help: 'Variabel: {nama} {no} {total} {jatuh_tempo} {klinik} {link}' })}${medan('cWr', 'Templat resume medis', { v: c.wa_template_resume, ta: 1, h: 72, help: 'Variabel: {nama} {tanggal} {klinik} {link}' })}</div>
   <div class="mt16"><button class="nx-btn primary" data-act="c.simpan"><i class="bi bi-check2"></i> Simpan Pengaturan</button></div>`);
 }
@@ -1807,12 +1837,28 @@ const bolehKonsul = () => isKelola() || (S.user && S.user.peran === 'DOKTER');
 const isDokter = () => S.user && S.user.peran === 'DOKTER';
 
 function pasangBadgeKonsul() {
-  if (KS.badge) return;
+  if (KS.badge) return; KS.nPrev = null; KS.judul = document.title;
   const cek = async () => {
-    if (!S.ready || document.hidden || !(isDokter() || isSuper())) return;
-    try { const l = await call('kons.daftar', {}); const n = l.reduce((a, k) => a + k.belum_dibaca, 0); const c = $('#cnt_konsul'); if (c) { c.textContent = n || ''; c.classList.toggle('hide', !n); } KS.list = l; } catch (e) { /* senyap */ }
+    if (S.ready && (isDokter() || isSuper())) {
+      try { const l = await call('kons.daftar', {}); const n = l.reduce((a, k) => a + k.belum_dibaca, 0); const c = $('#cnt_konsul'); if (c) { c.textContent = n || ''; c.classList.toggle('hide', !n); } KS.list = l; notifBaruKonsul(n); } catch (e) { /* senyap */ }
+    }
+    KS.badge = setTimeout(cek, document.hidden ? 60000 : 20000);
   };
-  KS.badge = setInterval(cek, 45000); setTimeout(cek, 1500);
+  KS.badge = setTimeout(cek, 1500);
+}
+/** Pesan pasien baru: judul tab "(n) Pesan baru", nada singkat, getar (HP). Tidak berbunyi pada pemuatan pertama. */
+function notifBaruKonsul(n) {
+  const naik = KS.nPrev !== null && n > KS.nPrev; KS.nPrev = n;
+  document.title = n ? '(' + n + ') Pesan baru \u2014 ' + (KS.judul || 'NexaERM') : (KS.judul || document.title);
+  if (naik) { bunyiNotif(); try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) { /* abaikan */ } }
+}
+function bunyiNotif() {
+  try {
+    const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+    const c = KS.ac || (KS.ac = new A()); if (c.state === 'suspended') c.resume();
+    const t = c.currentTime;
+    [[880, 0], [1175, .16]].forEach(x => { const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = x[0]; g.gain.setValueAtTime(.0001, t + x[1]); g.gain.exponentialRampToValueAtTime(.25, t + x[1] + .02); g.gain.exponentialRampToValueAtTime(.0001, t + x[1] + .3); o.connect(g); g.connect(c.destination); o.start(t + x[1]); o.stop(t + x[1] + .32); });
+  } catch (e) { /* abaikan */ }
 }
 
 VIEWS.konsul = function (v, arg) { return arg ? chatStaf(v, arg) : daftarKonsul(v); };
